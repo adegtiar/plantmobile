@@ -1,12 +1,9 @@
-#!/usr/bin/python3
-
 # This example shows using two TSL2491 light sensors attached to TCA9548A channels 0 and 1.
 # Use with other I2C sensors would be similar.
 import adafruit_tsl2561
 import adafruit_tca9548a
 import board
 import busio
-import time
 
 from collections import namedtuple
 from numpy import mean
@@ -35,17 +32,3 @@ def read_light_data():
     diff = outer - inner
     diff_percent = int(diff/avg * 100) if avg else 0
     return LightData(outer, inner, avg, diff, diff_percent)
-
-
-try:
-    while True:
-        lux = read_light_data()
-        print("outer sensor:\t", lux.outer)
-        print("inner sensor:\t", lux.inner)
-        print("average     :\t", lux.avg)
-        print("diff        :\t", lux.diff)
-        print("diff percent:\t {}%".format(lux.diff_percent))
-        print()
-        time.sleep(.5)
-except KeyboardInterrupt:
-    print("Stopped")
