@@ -5,7 +5,7 @@ import time
 from light_sensors import read_light_data
 from logger import LightCsvLogger
 
-LOG_FILENAME = "sensor_log.csv"
+LOG_FILENAME = "data/sensor_log.csv"
 
 logger = LightCsvLogger(LOG_FILENAME)
 
