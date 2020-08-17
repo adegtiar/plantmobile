@@ -29,7 +29,8 @@ LightData = namedtuple('LightData', ['outer', 'inner', 'avg', 'diff', 'diff_perc
 
 # Get a tuple of the current luminosity reading.
 def read_light_data():
-    outer, inner = outer_tsl.infrared, inner_tsl.infrared
+    outer = outer_tsl.infrared
+    inner = inner_tsl.infrared
     timestamp = datetime.now()
     avg = int(mean((outer, inner)))
     diff = outer - inner
