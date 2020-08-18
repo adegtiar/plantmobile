@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # Script to read data from the CSV and display it in a graph:
 
 import matplotlib.pyplot as plt
@@ -8,7 +10,7 @@ import numpy as np
 from matplotlib import style
 from datetime import datetime
 
-LAST_N_POINTS = 150
+LAST_N_POINTS = 200
 
 style.use('seaborn-whitegrid')
 fig = plt.figure(num='Luminosity of Outer & Inner Sensors', figsize=[13,3])
