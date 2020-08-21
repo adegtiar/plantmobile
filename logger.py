@@ -10,12 +10,9 @@ class LightCsvLogger(object):
         self._cur_timestamp = None
         self._cur_timestamp_luxes = []
 
-    def _init_file(self):
-        self._file = open(self.filename, 'a')
-
     def log(self, lux):
         if self._file is None:
-            self._init_file()
+            self._file = open(self.filename, 'a')
 
         # Timestamp truncated down to the minute
         timestamp = lux.timestamp.isoformat(timespec='minutes')
@@ -37,6 +34,6 @@ class LightCsvLogger(object):
             self._cur_timestamp = timestamp
             self._cur_timestamp_luxes = []
 
-        # Aggregate another reading within the same minute.
+        # Add another reading to aggregate within the same minute.
         self._cur_timestamp_luxes.append(lux)
         return
