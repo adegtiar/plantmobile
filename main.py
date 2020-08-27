@@ -4,9 +4,14 @@ import RPi.GPIO as GPIO
 import time
 
 from collections import namedtuple
+
+from led_graphs import LedBarGraphs
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 
+
+LED_BAR_GRAPHS = LedBarGraphs(data_pin=26, latch_pin=19, clock_pin=13,
+        min_level=100, max_level=20000)
 
 CAR_SENSORS = LightSensorReader(outer_pin=2, inner_pin=6)
 CAR_LOGGER = LightCsvLogger("data/car_sensor_log.csv")
@@ -20,6 +25,7 @@ def setup():
 
 
 def destroy():
+    LED_BAR_GRAPHS.reset()
     GPIO.cleanup()
 
 
@@ -50,6 +56,7 @@ def loop(base_sensors, car_sensors):
 
         print_status(base_lux, car_lux)
 
+        LED_BAR_GRAPHS.set_levels(base_lux.outer, base_lux.inner)
         BASE_LOGGER.log(base_lux)
         if car_sensors:
             CAR_LOGGER.log(car_lux)
