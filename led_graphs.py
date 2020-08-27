@@ -54,6 +54,9 @@ class LedBarGraphs(object):
         GPIO.output(self.latch_pin, GPIO.HIGH)  # Latch the output to the latest register values.
         GPIO.output(self.latch_pin, GPIO.LOW)   # Keep latch pin low.
 
+    def reset(self):
+        self.set_levels(*[0]*self.num_graphs)
+
 
 if __name__ == '__main__': # Program entrance
     print ('Running test program for led graphs...' )
@@ -74,5 +77,5 @@ if __name__ == '__main__': # Program entrance
                 graphs.set_levels(max_level-i, i)
                 time.sleep(.5)
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
-        graphs.set_levels(0, 0)
+        graphs.reset()
         GPIO.cleanup()
