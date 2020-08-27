@@ -20,9 +20,18 @@ class LightSensorReader(object):
     _mux = None
 
     def __init__(self, outer_pin, inner_pin):
+        self.outer_pin = outer_pin
+        self.inner_pin = inner_pin
+        self._outer_tsl = None
+        self._inner_tsl = None
+
+    def initialize(self):
         # For each sensor, create it using the TCA9548A channel acting as an I2C object.
-        self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[outer_pin])
-        self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[inner_pin])
+        # May throw a ValueError if it's not connected.
+        if self._outer_tsl is None:
+            assert self._inner_tsl is None, "partially initialized state"
+            self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.outer_pin])
+            self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.inner_pin])
 
     @classmethod
     def get_mux(cls):
@@ -35,6 +44,8 @@ class LightSensorReader(object):
 
     # Get a tuple of the current luminosity reading.
     def read(self):
+        self.initialize()
+
         outer = self._outer_tsl.infrared
         inner = self._inner_tsl.infrared
         timestamp = datetime.now()
