@@ -4,6 +4,7 @@ import adafruit_tsl2561
 import adafruit_tca9548a
 import board
 import busio
+import logging
 
 from collections import namedtuple
 from datetime import datetime
@@ -30,12 +31,15 @@ class LightSensorReader(object):
         # May throw a ValueError if it's not connected.
         if self._outer_tsl is None:
             assert self._inner_tsl is None, "partially initialized state"
+            logging.info("Initializing LightSensorReader with mux pins Outer: {}, Inner: {}".format(
+                self.outer_pin, self.inner_pin))
             self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.outer_pin])
             self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.inner_pin])
 
     @classmethod
     def get_mux(cls):
         if cls._mux is None:
+            logging.info("Initializing i2c mux TCA9548A on SCL and SDA pins")
             # Create I2C bus as normal.
             i2c = busio.I2C(board.SCL, board.SDA)
             # Create the TCA9548A object and give it the I2C bus.

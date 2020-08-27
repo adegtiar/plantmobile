@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import logging
 import RPi.GPIO as GPIO
 import time
 
@@ -9,9 +10,10 @@ from led_graphs import LedBarGraphs
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 
+logging.basicConfig(level=logging.INFO)
 
 LED_BAR_GRAPHS = LedBarGraphs(data_pin=26, latch_pin=19, clock_pin=13,
-        min_level=100, max_level=20000)
+        min_level=500, max_level=30000)
 
 CAR_SENSORS = LightSensorReader(outer_pin=2, inner_pin=6)
 CAR_LOGGER = LightCsvLogger("data/car_sensor_log.csv")
@@ -48,6 +50,7 @@ def loop(base_sensors, car_sensors):
     try:
         car_sensors.initialize()
     except ValueError: # This might happen if the car is disconnected
+        logging.warning("Failed to initialize car sensors. Car may be disconnected.")
         car_sensors = None
 
     while True:
