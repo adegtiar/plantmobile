@@ -31,11 +31,12 @@ class LedBarGraphs(object):
     def _set_graph_output(self, level):
         if level > self.max_level:
             level = self.max_level
-        if level < self.min_level:
-            level = 0
 
         # Scale the level range to the led range.
-        led_level = int((level - self.min_level) / self.levels_per_led)
+        led_level = int((level - self.min_level) / self.levels_per_led + 1)
+        led_level = min(max(led_level, 0), self.num_leds)
+        assert led_level <= self.num_leds, \
+                "led_level {} higher than num leds {}".format(led_level, self.num_leds)
 
         # Keep all leds on up to and not including the level.
         output_bits = [0]*(self.num_leds - led_level) + [1]*led_level
@@ -64,15 +65,13 @@ if __name__ == '__main__': # Program entrance
     try:
         max_level=16
         graphs = LedBarGraphs(
-                data_pin=26, latch_pin=19, clock_pin=13, min_level=1, max_level=max_level)
-        graphs.set_levels(0, max_level)
-        time.sleep(.5)
+                data_pin=26, latch_pin=19, clock_pin=13, min_level=8, max_level=max_level)
         while True:
-            for i in range(1, max_level+1):
+            for i in range(0, max_level+1):
                 print("Setting level to ({}, {})".format(i, max_level-i))
                 graphs.set_levels(i, max_level-i)
                 time.sleep(.5)
-            for i in range(1, max_level+1):
+            for i in range(0, max_level+1):
                 print("Setting level to ({}, {})".format(i, max_level-i))
                 graphs.set_levels(max_level-i, i)
                 time.sleep(.5)
