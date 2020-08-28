@@ -15,11 +15,11 @@ logging.basicConfig(level=logging.INFO)
 LED_BAR_GRAPHS = LedBarGraphs(data_pin=26, latch_pin=19, clock_pin=13,
         min_level=500, max_level=30000)
 
-CAR_SENSORS = LightSensorReader(outer_pin=2, inner_pin=6)
-CAR_LOGGER = LightCsvLogger("data/car_sensor_log.csv")
+STEPPER_CAR_SENSORS = LightSensorReader(outer_pin=2, inner_pin=6, name="Stepper car sensors")
+STEPPER_CAR_LOGGER = LightCsvLogger("data/car_sensor_log.csv")
 
-BASE_SENSORS = LightSensorReader(outer_pin=1, inner_pin=7)
-BASE_LOGGER = LightCsvLogger("data/base_sensor_log.csv")
+DC_CAR_SENSORS = LightSensorReader(outer_pin=1, inner_pin=0, name="DC car sensors")
+DC_CAR_LOGGER = LightCsvLogger("data/base_sensor_log.csv")
 
 
 def setup():
@@ -36,7 +36,7 @@ def print_status(base_lux, car_lux):
         car_outer, car_inner, car_avg, car_diff, car_diff_percent, _ = car_lux
     else:
         car_outer, car_inner, car_avg, car_diff, car_diff_percent = ("N/A",) * 5
-    print("sensor:\t\tCar\tBase")
+    print("sensor:\t\tStepper\tDC")
     print("outer:\t\t{}\t{}".format(car_outer, base_lux.outer))
     print("inner:\t\t{}\t{}".format(car_inner, base_lux.inner))
     print("average:\t{}\t{}".format(car_avg, base_lux.avg))
@@ -60,16 +60,16 @@ def loop(base_sensors, car_sensors):
         print_status(base_lux, car_lux)
 
         LED_BAR_GRAPHS.set_levels(base_lux.outer, base_lux.inner)
-        BASE_LOGGER.log(base_lux)
+        DC_CAR_LOGGER.log(base_lux)
         if car_sensors:
-            CAR_LOGGER.log(car_lux)
+            STEPPER_CAR_LOGGER.log(car_lux)
 
         time.sleep(.5)
 
 
 if __name__ == '__main__':
     try:
-        loop(BASE_SENSORS, CAR_SENSORS)
+        loop(DC_CAR_SENSORS, STEPPER_CAR_SENSORS)
     except KeyboardInterrupt:
         destroy()
         print("Stopped")
