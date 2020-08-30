@@ -69,7 +69,7 @@ def loop(base_sensors, car_sensors):
 
 if __name__ == '__main__':
     try:
-        loop(DC_CAR_SENSORS, STEPPER_CAR_SENSORS)
+        loop(STEPPER_CAR_SENSORS, DC_CAR_SENSORS)
     except KeyboardInterrupt:
         destroy()
         print("Stopped")
