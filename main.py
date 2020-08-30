@@ -3,6 +3,7 @@
 import logging
 import RPi.GPIO as GPIO
 import time
+import tm1637
 
 from collections import namedtuple
 
@@ -14,6 +15,7 @@ logging.basicConfig(level=logging.INFO)
 
 LED_BAR_GRAPHS = LedBarGraphs(data_pin=26, latch_pin=19, clock_pin=13,
         min_level=500, max_level=30000)
+DIFF_DISPLAY = tm1637.TM1637(clk=20, dio=21)
 
 STEPPER_CAR_SENSORS = LightSensorReader(outer_pin=2, inner_pin=6, name="Stepper car sensors")
 STEPPER_CAR_LOGGER = LightCsvLogger("data/car_sensor_log.csv")
@@ -27,7 +29,10 @@ def setup():
 
 
 def destroy():
+    # Clear the bar graph.
     LED_BAR_GRAPHS.reset()
+    # Cleart the led numeric display.
+    DIFF_DISPLAY.write([0, 0, 0, 0])
     GPIO.cleanup()
 
 
@@ -52,6 +57,7 @@ def loop(base_sensors, car_sensors):
     except ValueError: # This might happen if the car is disconnected
         logging.warning("Failed to initialize car sensors. Car may be disconnected.")
         car_sensors = None
+    DIFF_DISPLAY.brightness(2)
 
     while True:
         base_lux = base_sensors.read()
@@ -60,6 +66,7 @@ def loop(base_sensors, car_sensors):
         print_status(base_lux, car_lux)
 
         LED_BAR_GRAPHS.set_levels(base_lux.outer, base_lux.inner)
+        DIFF_DISPLAY.number(base_lux.diff_percent)
         DC_CAR_LOGGER.log(base_lux)
         if car_sensors:
             STEPPER_CAR_LOGGER.log(car_lux)
