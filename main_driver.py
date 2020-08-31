@@ -4,26 +4,26 @@ import logging
 import RPi.GPIO as GPIO
 import sys
 import time
-import tm1637
 
 from collections import namedtuple
 
-from led_graphs import LedBarGraphs
+from led_graphs import LedBarGraphs, DigitDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 
 logging.basicConfig(level=logging.INFO)
 
 
+
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
-    def __init__(self, name, light_sensors, logger, led_bar_graphs=None, diff_display=None):
+    def __init__(self, name, light_sensors, logger, led_bar_graphs=None, digit_display=None):
         self.name = name
         self.light_sensors = light_sensors
         self.logger = logger
         self.led_bar_graphs = led_bar_graphs
-        self.diff_display = diff_display
+        self.digit_display = digit_display
 
     def setup(self):
         """Initialize all components of the platform.
@@ -38,15 +38,15 @@ class PlatformDriver(object):
         self.logger.setup()
         if self.led_bar_graphs:
             self.led_bar_graphs.setup()
-        if self.diff_display is not None:
-            self.diff_display.brightness(2)
+        if self.digit_display is not None:
+            self.digit_display.setup()
 
     def cleanup(self):
         """Cleans up and resets any local state and outputs."""
         if self.led_bar_graphs:
             self.led_bar_graphs.reset()
-        if self.diff_display:
-            self.diff_display.write([0, 0, 0, 0])
+        if self.digit_display:
+            self.digit_display.reset()
 
     def update_lux(self):
         """Reads and processes the current lux from the sensors."""
@@ -54,8 +54,8 @@ class PlatformDriver(object):
         self.logger.log(lux)
         if self.led_bar_graphs:
             self.led_bar_graphs.set_levels(lux.outer, lux.inner)
-        if self.diff_display:
-            self.diff_display.number(lux.diff_percent)
+        if self.digit_display:
+            self.digit_display.update_diff(lux)
         return lux
 
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
             logger = LightCsvLogger("data/car_sensor_log.csv"),
             led_bar_graphs=LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
-            diff_display=tm1637.TM1637(clk=20, dio=21))
+            digit_display=DigitDisplay(clock_pin=20, data_pin=21, min_output_light=10))
 
 
     DC_CAR = PlatformDriver(

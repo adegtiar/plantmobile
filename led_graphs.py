@@ -4,9 +4,37 @@ import logging
 import RPi.GPIO as GPIO
 import time
 
+import tm1637
 
 def setup():
     GPIO.setmode(GPIO.BCM)        # use BCM GPIO Numbering
+
+
+class DigitDisplay(object):
+    """A 7-digit display to show lux readings."""
+
+    def __init__(self, clock_pin, data_pin, min_output_light=-1, brightness=2):
+        self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
+        # The minumum light intensity at which the graphs will update.
+        # Used to keep the light off at night.
+        self.min_output_light = min_output_light
+        # The brightness of the display, from 0-7
+        self.brightness=brightness
+
+    def setup(self):
+        self._display.brightness(self.brightness)
+        self.reset()
+
+    def update_diff(self, lux):
+        """Displays the percent difference of the light reading."""
+        if lux.avg >= self.min_output_light:
+            self._display.number(lux.diff_percent)
+        else:
+            self.reset()
+
+    def reset(self):
+        """Reset the display to an empty state."""
+        self._display.show("    ")
 
 
 class LedBarGraphs(object):
