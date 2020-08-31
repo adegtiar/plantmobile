@@ -35,10 +35,14 @@ class LedBarGraphs(object):
                 "initializing {} graphs with {} leds, min {}, max {}, and {} levels per led".format(
                     num_graphs, num_leds, min_level, max_level, self.levels_per_led))
 
+    def initialize(self):
         # Prepare the pin channels for output.
-        GPIO.setup(data_pin, GPIO.OUT)
-        GPIO.setup(latch_pin, GPIO.OUT)
-        GPIO.setup(clock_pin, GPIO.OUT)
+        GPIO.setup(self.data_pin, GPIO.OUT)
+        GPIO.setup(self.latch_pin, GPIO.OUT)
+        GPIO.setup(self.clock_pin, GPIO.OUT)
+        # Initialize output to nothing. This resets the graph in case it was
+        # partially set and validates that the basic IO is working.
+        self.set_levels(*[0]*self.num_graphs)
 
     # Set led values for one graph.
     def _set_leds(self, led_level):

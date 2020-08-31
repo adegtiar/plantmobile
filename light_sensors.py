@@ -12,7 +12,8 @@ from numpy import mean
 
 
 # A reading of light sensor data.
-SensorReading = namedtuple('SensorReading', ['outer', 'inner', 'avg', 'diff', 'diff_percent', 'timestamp'])
+SensorReading = namedtuple('SensorReading',
+        ['outer', 'inner', 'avg', 'diff', 'diff_percent', 'timestamp', 'name'])
 
 
 # Read lux data from a pair of sensors connected to multiplexer.
@@ -20,7 +21,7 @@ class LightSensorReader(object):
     # This is the i2c multiplexer used for the light sensors (to deal with address conflict).
     _mux = None
 
-    def __init__(self, outer_pin, inner_pin, name="LightSensorReader"):
+    def __init__(self, outer_pin, inner_pin, name="<default>"):
         self.name = name
         self.outer_pin = outer_pin
         self.inner_pin = inner_pin
@@ -32,7 +33,7 @@ class LightSensorReader(object):
         # May throw a ValueError if it's not connected.
         if self._outer_tsl is None:
             assert self._inner_tsl is None, "partially initialized state"
-            logging.info("Initializing {} with mux pins Outer: {}, Inner: {}".format(
+            logging.info("Initializing {} light sensors with mux pins Outer: {}, Inner: {}".format(
                 self.name, self.outer_pin, self.inner_pin))
             self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.outer_pin])
             self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.inner_pin])
@@ -57,4 +58,4 @@ class LightSensorReader(object):
         avg = int(mean((outer, inner)))
         diff = outer - inner
         diff_percent = int(diff/avg * 100) if avg else 0
-        return SensorReading(outer, inner, avg, diff, diff_percent, timestamp)
+        return SensorReading(outer, inner, avg, diff, diff_percent, timestamp, self.name)
