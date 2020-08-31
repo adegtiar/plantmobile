@@ -28,7 +28,7 @@ class LightSensorReader(object):
         self._outer_tsl = None
         self._inner_tsl = None
 
-    def initialize(self):
+    def setup(self):
         # For each sensor, create it using the TCA9548A channel acting as an I2C object.
         # May throw a ValueError if it's not connected.
         if self._outer_tsl is None:
@@ -50,7 +50,7 @@ class LightSensorReader(object):
 
     # Get a tuple of the current luminosity reading.
     def read(self):
-        self.initialize()
+        self.setup()
 
         outer = self._outer_tsl.infrared
         inner = self._inner_tsl.infrared

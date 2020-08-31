@@ -31,11 +31,13 @@ class LedBarGraphs(object):
         self.max_level = max_level
         self.num_graphs = num_graphs
         self.levels_per_led = (max_level - min_level) / (num_leds - 1)
+
+    def setup(self):
         logging.info(
                 "initializing {} graphs with {} leds, min {}, max {}, and {} levels per led".format(
-                    num_graphs, num_leds, min_level, max_level, self.levels_per_led))
+                    self.num_graphs, self.num_leds, self.min_level,
+                    self.max_level, self.levels_per_led))
 
-    def initialize(self):
         # Prepare the pin channels for output.
         GPIO.setup(self.data_pin, GPIO.OUT)
         GPIO.setup(self.latch_pin, GPIO.OUT)

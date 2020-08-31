@@ -10,12 +10,12 @@ class LightCsvLogger(object):
         self._cur_timestamp = None
         self._cur_timestamp_luxes = []
 
-    def initialize(self):
+    def setup(self):
         if self._file is None:
             self._file = open(self.filename, 'a')
 
     def log(self, lux):
-        self.initialize()
+        self.setup()
 
         # Timestamp truncated down to the minute
         timestamp = lux.timestamp.isoformat(timespec='minutes')

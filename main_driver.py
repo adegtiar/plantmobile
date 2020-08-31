@@ -25,7 +25,7 @@ class PlatformDriver(object):
         self.led_bar_graphs = led_bar_graphs
         self.diff_display = diff_display
 
-    def initialize(self):
+    def setup(self):
         """Initialize all components of the platform.
 
         This sets up connections and initializes default state. Any obvious failures in the hardware
@@ -33,11 +33,11 @@ class PlatformDriver(object):
         """
         # Set up the light sensors for reading.
         self.light_sensors.name = self.name
-        self.light_sensors.initialize()
+        self.light_sensors.setup()
         # Set up the logger for writing.
-        self.logger.initialize()
+        self.logger.setup()
         if self.led_bar_graphs:
-            self.led_bar_graphs.initialize()
+            self.led_bar_graphs.setup()
         if self.diff_display is not None:
             self.diff_display.brightness(2)
 
@@ -66,10 +66,10 @@ def setup(platforms):
     working_platforms = []
     for platform in platforms:
         try:
-            platform.initialize()
+            platform.setup()
         except ValueError: # This might happen if the car is disconnected
             logging.warning(
-                    "Failed to initialize {} platform: may be disconnected.".format(platform.name))
+                    "Failed to setup {} platform: may be disconnected.".format(platform.name))
         else:
             working_platforms.append(platform)
     return working_platforms
