@@ -8,12 +8,14 @@
 import RPi.GPIO as GPIO
 import time
 
+from gpiozero import LED, Button
+
 motorPins = (22, 10, 9, 11)    # define pins connected to four phase ABCD of stepper motor
 CCWStep = (0x01,0x02,0x04,0x08) # define power supply order for rotating anticlockwise
 CWStep = (0x08,0x04,0x02,0x01)  # define power supply order for rotating clockwise
 
 def setup():
-    GPIO.setmode(GPIO.BCM)       # use PHYSICAL GPIO Numbering
+    GPIO.setmode(GPIO.BCM)       # use BCM GPIO Numbering
     for pin in motorPins:
         GPIO.setup(pin,GPIO.OUT)
 
@@ -46,14 +48,34 @@ def loop():
         moveSteps(0,3,750)  # rotating 360 deg anticlockwise (+1/4)
         time.sleep(0.5)
 
+blue_led = LED(20)
+blue_button = Button(21)
+
+yellow_led = LED(12)
+yellow_button = Button(16)
+
+def control_loop():
+    while True:
+        if blue_button.is_pressed:
+            blue_led.on()
+            moveOnePeriod(1, 3)
+        else:
+            blue_led.off()
+        if yellow_button.is_pressed:
+            yellow_led.on()
+            moveOnePeriod(0, 3)
+        else:
+            yellow_led.off()
+
 def destroy():
     GPIO.cleanup()             # Release resource
 
 if __name__ == '__main__':     # Program entrance
-    print ('Program is starting...')
+    print('Program is starting...')
+    print('BLUE button towards inner, YELLOW towards outer')
     setup()
     try:
-        loop()
+       control_loop()
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         pass
     finally:
