@@ -14,7 +14,6 @@ from logger import LightCsvLogger
 logging.basicConfig(level=logging.INFO)
 
 
-
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
@@ -23,9 +22,15 @@ class PlatformDriver(object):
         self.name = name
         self.light_sensors = light_sensors
         self.logger = logger
-        self.led_bar_graphs = led_bar_graphs
-        self.digit_display = digit_display
-        self.led_shadow_indicator = led_shadow_indicator
+
+        output_indicators = []
+        if led_bar_graphs:
+            output_indicators.append(led_bar_graphs)
+        if digit_display:
+            output_indicators.append(digit_display)
+        if led_shadow_indicator:
+            output_indicators.append(led_shadow_indicator)
+        self.output_indicators = output_indicators
 
     def setup(self):
         """Initialize all components of the platform.
@@ -38,32 +43,21 @@ class PlatformDriver(object):
         self.light_sensors.setup()
         # Set up the logger for writing.
         self.logger.setup()
-        if self.led_bar_graphs:
-            self.led_bar_graphs.setup()
-        if self.digit_display:
-            self.digit_display.setup()
-        if self.led_shadow_indicator:
-            self.led_shadow_indicator.setup()
+        for output in self.output_indicators:
+            output.setup()
 
     def cleanup(self):
         """Cleans up and resets any local state and outputs."""
-        if self.led_bar_graphs:
-            self.led_bar_graphs.reset()
-        if self.digit_display:
-            self.digit_display.reset()
-        if self.led_shadow_indicator:
-            self.led_shadow_indicator.reset()
+        for output in self.output_indicators:
+            output.reset()
 
     def update_lux(self):
         """Reads and processes the current lux from the sensors."""
         lux = self.light_sensors.read()
         self.logger.log(lux)
-        if self.led_bar_graphs:
-            self.led_bar_graphs.set_levels(lux.outer, lux.inner)
-        if self.digit_display:
-            self.digit_display.update_diff(lux)
-        if self.led_shadow_indicator:
-            self.led_shadow_indicator.update_lux(lux)
+
+        for output in self.output_indicators:
+            output.update_lux(lux)
         return lux
 
 
@@ -120,7 +114,7 @@ if __name__ == '__main__':
             logger = LightCsvLogger("data/car_sensor_log.csv"),
             led_bar_graphs=LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
-            digit_display=DigitDisplay(clock_pin=5, data_pin=6, min_output_light=10),
+            digit_display=DigitDisplay(clock_pin=5, data_pin=6),
             led_shadow_indicator=LedShadowIndicator(outer_led_pin=12, inner_led_pin=20))
 
 

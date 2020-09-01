@@ -1,14 +1,40 @@
 #!/usr/bin/env python3
 
 import logging
-from gpiozero import LED
 import RPi.GPIO as GPIO
 import time
 
 import tm1637
 
+from abc import ABC, abstractmethod
+from gpiozero import LED
 
-class LedShadowIndicator(object):
+
+class OutputIndicator(ABC):
+    # The minimum average lux at which it will output anything.
+    # Used to keep the light off at night.
+    MIN_OUTPUT_LUX = 10
+
+    @abstractmethod
+    def setup(self):
+        pass
+
+    @abstractmethod
+    def reset(self):
+        pass
+
+    @abstractmethod
+    def _update_lux(self, lux):
+        pass
+
+    def update_lux(self, lux):
+        if lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
+            self.reset()
+        else:
+            self._update_lux(lux)
+
+
+class LedShadowIndicator(OutputIndicator):
     DIFF_PERCENT_CUTOFF = 100
 
     def __init__(self, outer_led_pin, inner_led_pin):
@@ -25,13 +51,12 @@ class LedShadowIndicator(object):
 
     def reset(self):
         """Reset the LEDs to off."""
-        # gpiozero handles cleanup of leds.
-        #if self.outer_led:
-        #    self.outer_led.off()
-        #if self.inner_led:
-        #    self.inner_led.off()
+        if self.outer_led:
+            self.outer_led.off()
+        if self.inner_led:
+            self.inner_led.off()
 
-    def update_lux(self, lux):
+    def _update_lux(self, lux):
         self.setup()
         # If one sensor is much brighter than the other, then light up the corresponding LED.
         if abs(lux.diff_percent) >= LedShadowIndicator.DIFF_PERCENT_CUTOFF:
@@ -47,14 +72,11 @@ class LedShadowIndicator(object):
             self.outer_led.off()
 
 
-class DigitDisplay(object):
+class DigitDisplay(OutputIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin, data_pin, min_output_light=-1, brightness=2):
+    def __init__(self, clock_pin, data_pin, brightness=2):
         self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
-        # The minumum light intensity at which the graphs will update.
-        # Used to keep the light off at night.
-        self.min_output_light = min_output_light
         # The brightness of the display, from 0-7
         self.brightness=brightness
 
@@ -62,19 +84,16 @@ class DigitDisplay(object):
         self._display.brightness(self.brightness)
         self.reset()
 
-    def update_diff(self, lux):
+    def _update_lux(self, lux):
         """Displays the percent difference of the light reading."""
-        if lux.avg >= self.min_output_light:
-            self._display.number(lux.diff_percent)
-        else:
-            self.reset()
+        self._display.number(lux.diff_percent)
 
     def reset(self):
         """Reset the display to an empty state."""
         self._display.show("    ")
 
 
-class LedBarGraphs(object):
+class LedBarGraphs(OutputIndicator):
     """
     Drives one or more Led Bar Graphs controller by shift register 74HC595.
 
@@ -145,6 +164,9 @@ class LedBarGraphs(object):
     def reset(self):
         logging.info("Resetting graphs to empty...")
         self.set_levels(*[0]*self.num_graphs)
+
+    def _update_lux(self, lux):
+        self.set_levels(lux.outer, lux.inner)
 
 
 if __name__ == '__main__': # Program entrance
