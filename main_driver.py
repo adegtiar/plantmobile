@@ -67,7 +67,8 @@ def setup(platforms):
     for platform in platforms:
         try:
             platform.setup()
-        except ValueError: # This might happen if the car is disconnected
+        except ValueError as e: # This might happen if the car is disconnected
+            logging.error(e)
             logging.warning(
                     "Failed to setup {} platform: may be disconnected.".format(platform.name))
         else:
@@ -106,11 +107,11 @@ def loop(platforms):
 if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
-            light_sensors=LightSensorReader(outer_pin=2, inner_pin=6),
+            light_sensors=LightSensorReader(outer_pin=2, inner_pin=7),
             logger = LightCsvLogger("data/car_sensor_log.csv"),
             led_bar_graphs=LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
-            digit_display=DigitDisplay(clock_pin=20, data_pin=21, min_output_light=10))
+            digit_display=DigitDisplay(clock_pin=5, data_pin=6, min_output_light=10))
 
 
     DC_CAR = PlatformDriver(
