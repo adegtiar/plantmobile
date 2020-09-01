@@ -1,13 +1,50 @@
 #!/usr/bin/env python3
 
 import logging
+from gpiozero import LED
 import RPi.GPIO as GPIO
 import time
 
 import tm1637
 
-def setup():
-    GPIO.setmode(GPIO.BCM)        # use BCM GPIO Numbering
+
+class LedShadowIndicator(object):
+    DIFF_PERCENT_CUTOFF = 100
+
+    def __init__(self, outer_led_pin, inner_led_pin):
+        self.outer_led_pin = outer_led_pin
+        self.inner_led_pin = inner_led_pin
+        self.outer_led = None
+        self.inner_led = None
+
+    def setup(self):
+        if not self.outer_led:
+            self.outer_led = LED(self.outer_led_pin)
+        if not self.inner_led:
+            self.inner_led = LED(self.inner_led_pin)
+
+    def reset(self):
+        """Reset the LEDs to off."""
+        # gpiozero handles cleanup of leds.
+        #if self.outer_led:
+        #    self.outer_led.off()
+        #if self.inner_led:
+        #    self.inner_led.off()
+
+    def update_lux(self, lux):
+        self.setup()
+        # If one sensor is much brighter than the other, then light up the corresponding LED.
+        if abs(lux.diff_percent) >= LedShadowIndicator.DIFF_PERCENT_CUTOFF:
+            if lux.outer > lux.inner:
+                self.outer_led.on()
+                self.inner_led.off()
+            else:
+                assert lux.outer < lux.inner, "inconsistent lux reading"
+                self.inner_led.on()
+                self.outer_led.off()
+        else:
+            self.inner_led.off()
+            self.outer_led.off()
 
 
 class DigitDisplay(object):

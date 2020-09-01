@@ -7,7 +7,7 @@ import time
 
 from collections import namedtuple
 
-from led_graphs import LedBarGraphs, DigitDisplay
+from led_graphs import DigitDisplay, LedBarGraphs, LedShadowIndicator
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 
@@ -18,12 +18,14 @@ logging.basicConfig(level=logging.INFO)
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
-    def __init__(self, name, light_sensors, logger, led_bar_graphs=None, digit_display=None):
+    def __init__(self, name, light_sensors, logger,
+            led_bar_graphs=None, digit_display=None, led_shadow_indicator=None):
         self.name = name
         self.light_sensors = light_sensors
         self.logger = logger
         self.led_bar_graphs = led_bar_graphs
         self.digit_display = digit_display
+        self.led_shadow_indicator = led_shadow_indicator
 
     def setup(self):
         """Initialize all components of the platform.
@@ -38,8 +40,10 @@ class PlatformDriver(object):
         self.logger.setup()
         if self.led_bar_graphs:
             self.led_bar_graphs.setup()
-        if self.digit_display is not None:
+        if self.digit_display:
             self.digit_display.setup()
+        if self.led_shadow_indicator:
+            self.led_shadow_indicator.setup()
 
     def cleanup(self):
         """Cleans up and resets any local state and outputs."""
@@ -47,6 +51,8 @@ class PlatformDriver(object):
             self.led_bar_graphs.reset()
         if self.digit_display:
             self.digit_display.reset()
+        if self.led_shadow_indicator:
+            self.led_shadow_indicator.reset()
 
     def update_lux(self):
         """Reads and processes the current lux from the sensors."""
@@ -56,6 +62,8 @@ class PlatformDriver(object):
             self.led_bar_graphs.set_levels(lux.outer, lux.inner)
         if self.digit_display:
             self.digit_display.update_diff(lux)
+        if self.led_shadow_indicator:
+            self.led_shadow_indicator.update_lux(lux)
         return lux
 
 
@@ -79,7 +87,8 @@ def setup(platforms):
 def cleanup(platforms):
     for platform in platforms:
         platform.cleanup()
-    GPIO.cleanup()
+    # GPIO cleanup not needed when also using gpiozero
+    #GPIO.cleanup()
 
 
 def print_status(luxes):
@@ -111,7 +120,8 @@ if __name__ == '__main__':
             logger = LightCsvLogger("data/car_sensor_log.csv"),
             led_bar_graphs=LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
-            digit_display=DigitDisplay(clock_pin=5, data_pin=6, min_output_light=10))
+            digit_display=DigitDisplay(clock_pin=5, data_pin=6, min_output_light=10),
+            led_shadow_indicator=LedShadowIndicator(outer_led_pin=12, inner_led_pin=20))
 
 
     DC_CAR = PlatformDriver(
