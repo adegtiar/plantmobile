@@ -7,7 +7,7 @@ import time
 
 from collections import namedtuple
 
-from led_graphs import DigitDisplay, LedBarGraphs, LedShadowIndicator
+from led_outputs import DigitDisplay, LedBarGraphs, LedShadowIndicator
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 
