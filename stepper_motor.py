@@ -10,7 +10,7 @@ import time
 
 from gpiozero import LED, Button
 
-motorPins = (25, 24, 8, 7)    # define pins connected to four phase ABCD of stepper motor
+motorPins = (27, 22, 10, 9)    # define pins connected to four phase ABCD of stepper motor
 CCWStep = (0x01,0x02,0x04,0x08) # define power supply order for rotating anticlockwise
 CWStep = (0x08,0x04,0x02,0x01)  # define power supply order for rotating clockwise
 
