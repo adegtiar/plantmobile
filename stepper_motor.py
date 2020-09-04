@@ -51,21 +51,23 @@ def loop():
 blue_led = LED(20)
 blue_button = Button(21)
 
-yellow_led = LED(12)
-yellow_button = Button(16)
+red_led = LED(12)
+red_button = Button(16)
 
 def control_loop():
     while True:
         if blue_button.is_pressed:
             blue_led.on()
+            red_led.off()
             moveOnePeriod(1, 3)
-        else:
+        elif red_button.is_pressed:
+            red_led.on()
             blue_led.off()
-        if yellow_button.is_pressed:
-            yellow_led.on()
             moveOnePeriod(0, 3)
         else:
-            yellow_led.off()
+            red_led.off()
+            blue_led.off()
+            motorStop()
 
 def destroy():
     GPIO.cleanup()             # Release resource
