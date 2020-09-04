@@ -110,7 +110,7 @@ def loop(platforms):
 if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
-            light_sensors=LightSensorReader(outer_pin=2, inner_pin=7),
+            light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
             logger = LightCsvLogger("data/car_sensor_log.csv"),
             led_bar_graphs=LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
