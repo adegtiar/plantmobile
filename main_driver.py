@@ -12,31 +12,44 @@ from gpiozero import Button
 from led_outputs import DigitDisplay, LedBarGraphs, LedShadowIndicator
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
+from motor import Direction, StepperMotor
 
 logging.basicConfig(level=logging.INFO)
 
 
+OUTER_DIRECTION = Direction.cw
+INNER_DIRECTION = Direction.ccw
+
+
 Status = namedtuple('Status', ['lux', 'button', 'position'])
 
+
+class MotorCommand(Enum):
+    STOP = 0
+    OUTER_STEP = 1
+    INNER_STEP = 2
+    FIND_ORIGIN = 3
+
+
 class ButtonStatus(Enum):
-    none_pressed = 0
-    outer_pressed = 1
-    inner_pressed = 2
-    both_pressed = 3
+    NONE_PRESSED = 0
+    OUTER_PRESSED = 1
+    INNER_PRESSED = 2
+    BOTH_PRESSED = 3
 
     @classmethod
     def from_buttons(cls, outer, inner):
-        outer_pressed = outer.is_pressed if outer else False
-        inner_pressed = inner.is_pressed if inner else False
+        OUTER_PRESSED = outer.is_pressed if outer else False
+        INNER_PRESSED = inner.is_pressed if inner else False
 
-        if outer_pressed and inner_pressed:
-            return ButtonStatus.both_pressed
-        elif outer_pressed:
-            return ButtonStatus.outer_pressed
-        elif inner_pressed:
-            return ButtonStatus.inner_pressed
+        if OUTER_PRESSED and INNER_PRESSED:
+            return ButtonStatus.BOTH_PRESSED
+        elif OUTER_PRESSED:
+            return ButtonStatus.OUTER_PRESSED
+        elif INNER_PRESSED:
+            return ButtonStatus.INNER_PRESSED
         else:
-            return ButtonStatus.none_pressed
+            return ButtonStatus.NONE_PRESSED
 
 
 class PlatformDriver(object):
@@ -97,6 +110,18 @@ class PlatformDriver(object):
 
         return Status(lux, button=button_status, position=self.position)
 
+    def motor_command(self, motor_command):
+        if motor_command is MotorCommand.STOP:
+            self.motor.reset()
+        elif motor_command is MotorCommand.OUTER_STEP:
+            self.motor.move_step(OUTER_DIRECTION)
+        elif motor_command is MotorCommand.INNER_STEP:
+            self.motor.move_step(INNER_DIRECTION)
+        elif motor_command is MotorCommand.FIND_ORIGIN:
+            logging.warning("FIND_ORIGIN command not implemented")
+        else:
+            assert False, "motor command {} not supported".format(motor_command)
+
 
 def setup(platforms):
     GPIO.setmode(GPIO.BCM)        # use BCM GPIO Numbering
@@ -143,6 +168,25 @@ def loop(platforms):
 
         print_status(statuses)
 
+        for status, platform in zip(statuses, platforms):
+            # Enable manual button->motor control.
+            if status.button is ButtonStatus.OUTER_PRESSED:
+                # TODO: better way to do this?
+                logging.info("starting command sequence OUTER_STEP")
+                while platform.outer_button.is_pressed:
+                    platform.motor_command(MotorCommand.OUTER_STEP)
+                logging.info("stopping command sequence OUTER_STEP")
+            if status.button is ButtonStatus.INNER_PRESSED:
+                # TODO: better way to do this?
+                logging.info("starting command sequence INNER_STEP")
+                while platform.inner_button.is_pressed:
+                    platform.motor_command(MotorCommand.INNER_STEP)
+                logging.info("stopping command sequence INNER_STEP")
+            elif status.button is ButtonStatus.BOTH_PRESSED:
+                platform.motor_command(MotorCommand.FIND_ORIGIN)
+            elif status.button is ButtonStatus.NONE_PRESSED:
+                logging.info("sending command STOP")
+                platform.motor_command(MotorCommand.STOP)
         # TODO: do something with the luxes.
         time.sleep(.5)
 
@@ -151,7 +195,8 @@ if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
-            logger = LightCsvLogger("data/car_sensor_log.csv"),
+            logger=LightCsvLogger("data/car_sensor_log.csv"),
+            motor=StepperMotor(27, 22, 10, 9),
             outer_button=Button(16),
             inner_button=Button(21),
             led_bar_graphs=LedBarGraphs(
