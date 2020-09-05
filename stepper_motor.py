@@ -1,87 +1,94 @@
 #!/usr/bin/env python3
-########################################################################
-# Filename    : SteppingMotor.py
-# Description : Drive SteppingMotor
-# Author      : www.freenove.com
-# modification: 2019/12/27
-########################################################################
+
 import RPi.GPIO as GPIO
 import time
 
+from enum import Enum
 from gpiozero import LED, Button
 
-motorPins = (27, 22, 10, 9)    # define pins connected to four phase ABCD of stepper motor
-CCWStep = (0x01,0x02,0x04,0x08) # define power supply order for rotating anticlockwise
-CWStep = (0x08,0x04,0x02,0x01)  # define power supply order for rotating clockwise
 
-def setup():
-    GPIO.setmode(GPIO.BCM)       # use BCM GPIO Numbering
-    for pin in motorPins:
-        GPIO.setup(pin,GPIO.OUT)
+class Direction(Enum):
+    cw = 0
+    ccw = 1
 
-# as for four phase stepping motor, four steps is a cycle. the function is used to drive the stepping motor clockwise or anticlockwise to take four steps
-def moveOnePeriod(direction,ms):
-    for j in range(0,4,1):      # cycle for power supply order
-        for i in range(0,4,1):  # assign to each pin
-            if (direction == 1):# power supply order clockwise
-                GPIO.output(motorPins[i],((CCWStep[j] == 1<<i) and GPIO.HIGH or GPIO.LOW))
-            else :              # power supply order anticlockwise
-                GPIO.output(motorPins[i],((CWStep[j] == 1<<i) and GPIO.HIGH or GPIO.LOW))
-        if(ms<3):       # the delay can not be less than 3ms, otherwise it will exceed speed limit of the motor
-            ms = 3
-        time.sleep(ms*0.001)
 
-# continuous rotation function, the parameter steps specifies the rotation cycles, every four steps is a cycle
-def moveSteps(direction, ms, steps):
-    for i in range(steps):
-        moveOnePeriod(direction, ms)
+CCW_STEPS = (0, 1, 2, 3) # define power supply order for rotating anticlockwise
+CW_STEPS = (3, 2, 1, 0)  # define power supply order for rotating clockwise
+MIN_PAUSE_SECS = 0.003
 
-# function used to stop motor
-def motorStop():
-    for i in range(0,4,1):
-        GPIO.output(motorPins[i],GPIO.LOW)
 
-def loop():
+class StepperMotor(object):
+    """The stepper motor moves in discrete steps and so can be used to track rotations."""
+
+    def __init__(self, pin1, pin2, pin3, pin4, pause_secs=MIN_PAUSE_SECS):
+        self.pins = (pin1, pin2, pin3, pin4)
+        self.pause_secs = max(pause_secs, MIN_PAUSE_SECS)
+
+    def setup(self):
+        for pin in self.pins:
+            GPIO.setup(pin, GPIO.OUT)
+
+    def reset(self):
+        """Reset the motor to stopped."""
+        for pin in self.pins:
+            GPIO.output(pin, GPIO.LOW)
+
+    def move_step(self, direction):
+        """Rotate the motor one period.
+
+        Note: this is technically 4 steps for convenience of implementation."""
+        if direction == Direction.ccw:
+            steps = CCW_STEPS
+        else:
+            steps = CW_STEPS
+
+        for step_idx in steps:
+            for pin_idx, pin in enumerate(self.pins):
+                # When the step index matches the pin index, make it high. Make all others low.
+                GPIO.output(pin, GPIO.HIGH if step_idx == pin_idx else GPIO.LOW)
+            # Pause just enough to max the rotation speed.
+            time.sleep(self.pause_secs)
+
+    # continuous rotation function, the parameter steps specifies the rotation cycles, every four steps is a cycle
+    def move_steps(self, direction, steps):
+        for i in range(steps):
+            self.move_step(direction)
+
+
+def loop(motor):
     while True:
-        moveSteps(1,3,750)  # rotating 360 deg clockwise, a total of 2048 steps in a circle, 512 cycles (+1/4)
+        motor.move_steps(1,750)  # rotating 360 deg clockwise, a total of 2048 steps in a circle, 512 cycles (+1/4)
         time.sleep(0.5)
-        moveSteps(0,3,750)  # rotating 360 deg anticlockwise (+1/4)
+        motor.move_steps(0,750)  # rotating 360 deg anticlockwise (+1/4)
         time.sleep(0.5)
 
-blue_led = LED(20)
-blue_button = Button(21)
 
-red_led = LED(12)
-red_button = Button(16)
-
-def control_loop():
+def control_loop(motor, blue_button, blue_led, red_button, red_led):
     while True:
         if blue_button.is_pressed:
             blue_led.on()
             red_led.off()
-            moveOnePeriod(1, 3)
+            motor.move_step(Direction.ccw)
         elif red_button.is_pressed:
             red_led.on()
             blue_led.off()
-            moveOnePeriod(0, 3)
+            motor.move_step(Direction.cw)
         else:
             red_led.off()
             blue_led.off()
-            motorStop()
+            motor.reset()
 
-def destroy():
-    GPIO.cleanup()             # Release resource
 
 if __name__ == '__main__':     # Program entrance
     print('Program is starting...')
     print('BLUE button towards inner, YELLOW towards outer')
-    setup()
+    GPIO.setmode(GPIO.BCM)       # use BCM GPIO Numbering
+    MOTOR = StepperMotor(27, 22, 10, 9)    # define pins connected to four phase ABCD of stepper motor
+    MOTOR.setup()
+
     try:
-       control_loop()
+       control_loop(
+               motor=MOTOR, blue_button=Button(21), blue_led=LED(20),
+               red_button=Button(16), red_led=LED(12))
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         pass
-    finally:
-        destroy()
-
-
-
