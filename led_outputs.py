@@ -162,7 +162,7 @@ class LedBarGraphs(OutputIndicator):
         GPIO.output(self.latch_pin, GPIO.LOW)   # Keep latch pin low.
 
     def reset(self):
-        logging.info("Resetting graphs to empty...")
+        logging.debug("Resetting graphs to empty...")
         self.set_levels(*[0]*self.num_graphs)
 
     def _update_lux(self, lux):

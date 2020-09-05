@@ -170,22 +170,22 @@ def loop(platforms):
 
         for status, platform in zip(statuses, platforms):
             # Enable manual button->motor control.
+            # TODO: is there a better way to do this?
             if status.button is ButtonStatus.OUTER_PRESSED:
-                # TODO: better way to do this?
                 logging.info("starting command sequence OUTER_STEP")
-                while platform.outer_button.is_pressed:
+                while platform.outer_button.is_pressed and not platform.inner_button.is_pressed:
                     platform.motor_command(MotorCommand.OUTER_STEP)
                 logging.info("stopping command sequence OUTER_STEP")
             if status.button is ButtonStatus.INNER_PRESSED:
-                # TODO: better way to do this?
                 logging.info("starting command sequence INNER_STEP")
-                while platform.inner_button.is_pressed:
+                while platform.inner_button.is_pressed and not platform.outer_button.is_pressed:
                     platform.motor_command(MotorCommand.INNER_STEP)
                 logging.info("stopping command sequence INNER_STEP")
             elif status.button is ButtonStatus.BOTH_PRESSED:
+                logging.info("sending command FIND_ORIGIN")
                 platform.motor_command(MotorCommand.FIND_ORIGIN)
             elif status.button is ButtonStatus.NONE_PRESSED:
-                logging.info("sending command STOP")
+                logging.debug("sending command STOP")
                 platform.motor_command(MotorCommand.STOP)
         # TODO: do something with the luxes.
         time.sleep(.5)
