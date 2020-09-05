@@ -6,6 +6,8 @@ import sys
 import time
 
 from collections import namedtuple
+from enum import Enum
+from gpiozero import Button
 
 from led_outputs import DigitDisplay, LedBarGraphs, LedShadowIndicator
 from light_sensors import LightSensorReader
@@ -14,14 +16,42 @@ from logger import LightCsvLogger
 logging.basicConfig(level=logging.INFO)
 
 
+Status = namedtuple('Status', ['lux', 'button', 'position'])
+
+class ButtonStatus(Enum):
+    none_pressed = 0
+    outer_pressed = 1
+    inner_pressed = 2
+    both_pressed = 3
+
+    @classmethod
+    def from_buttons(cls, outer, inner):
+        outer_pressed = outer.is_pressed if outer else False
+        inner_pressed = inner.is_pressed if inner else False
+
+        if outer_pressed and inner_pressed:
+            return ButtonStatus.both_pressed
+        elif outer_pressed:
+            return ButtonStatus.outer_pressed
+        elif inner_pressed:
+            return ButtonStatus.inner_pressed
+        else:
+            return ButtonStatus.none_pressed
+
+
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
     def __init__(self, name, light_sensors, logger,
+            motor=None, outer_button=None, inner_button=None,
             led_bar_graphs=None, digit_display=None, led_shadow_indicator=None):
         self.name = name
         self.light_sensors = light_sensors
         self.logger = logger
+        self.motor = motor
+        self.outer_button = outer_button
+        self.inner_button = inner_button
+        self.position = None
 
         output_indicators = []
         if led_bar_graphs:
@@ -43,6 +73,8 @@ class PlatformDriver(object):
         self.light_sensors.setup()
         # Set up the logger for writing.
         self.logger.setup()
+        if self.motor:
+            self.motor.setup()
         for output in self.output_indicators:
             output.setup()
 
@@ -50,15 +82,20 @@ class PlatformDriver(object):
         """Cleans up and resets any local state and outputs."""
         for output in self.output_indicators:
             output.reset()
+        if self.motor:
+            self.motor.reset()
 
-    def update_lux(self):
+    def update_status(self):
         """Reads and processes the current lux from the sensors."""
         lux = self.light_sensors.read()
         self.logger.log(lux)
 
         for output in self.output_indicators:
             output.update_lux(lux)
-        return lux
+
+        button_status = ButtonStatus.from_buttons(self.outer_button, self.inner_button)
+
+        return Status(lux, button=button_status, position=self.position)
 
 
 def setup(platforms):
@@ -85,7 +122,8 @@ def cleanup(platforms):
     #GPIO.cleanup()
 
 
-def print_status(luxes):
+def print_status(statuses):
+    luxes = [status.lux for status in statuses]
     def tabbed_join(accessor):
         return "\t".join(str(accessor(lux)) for lux in luxes)
     print("sensor:\t\t" + tabbed_join(lambda lux: lux.name))
@@ -94,14 +132,16 @@ def print_status(luxes):
     print("average:\t" + tabbed_join(lambda lux: lux.avg))
     print("diff:\t\t" + tabbed_join(lambda lux: lux.diff))
     print("diff percent:\t" + tabbed_join(lambda lux: "{}%".format(lux.diff_percent)))
+    print("button_status:\t" + "\t".join([status.button.name for status in statuses]))
+    print("position:\t" + "\t".join([str(status.position) for status in statuses]))
     print()
 
 
 def loop(platforms):
     while True:
-        luxes = [platform.update_lux() for platform in platforms]
+        statuses = [platform.update_status() for platform in platforms]
 
-        print_status(luxes)
+        print_status(statuses)
 
         # TODO: do something with the luxes.
         time.sleep(.5)
@@ -112,6 +152,8 @@ if __name__ == '__main__':
             name="Stepper",
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
             logger = LightCsvLogger("data/car_sensor_log.csv"),
+            outer_button=Button(16),
+            inner_button=Button(21),
             led_bar_graphs=LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
             digit_display=DigitDisplay(clock_pin=5, data_pin=6),
