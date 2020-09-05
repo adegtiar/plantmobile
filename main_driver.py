@@ -37,20 +37,6 @@ class ButtonStatus(Enum):
     INNER_PRESSED = 2
     BOTH_PRESSED = 3
 
-    @classmethod
-    def from_buttons(cls, outer, inner):
-        OUTER_PRESSED = outer.is_pressed if outer else False
-        INNER_PRESSED = inner.is_pressed if inner else False
-
-        if OUTER_PRESSED and INNER_PRESSED:
-            return ButtonStatus.BOTH_PRESSED
-        elif OUTER_PRESSED:
-            return ButtonStatus.OUTER_PRESSED
-        elif INNER_PRESSED:
-            return ButtonStatus.INNER_PRESSED
-        else:
-            return ButtonStatus.NONE_PRESSED
-
 
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
@@ -106,9 +92,22 @@ class PlatformDriver(object):
         for output in self.output_indicators:
             output.update_lux(lux)
 
-        button_status = ButtonStatus.from_buttons(self.outer_button, self.inner_button)
+        button_status = self.get_button_status()
 
         return Status(lux, button=button_status, position=self.position)
+
+    def get_button_status(self):
+        OUTER_PRESSED = self.outer_button.is_pressed if self.outer_button else False
+        INNER_PRESSED = self.inner_button.is_pressed if self.inner_button else False
+
+        if OUTER_PRESSED and INNER_PRESSED:
+            return ButtonStatus.BOTH_PRESSED
+        elif OUTER_PRESSED:
+            return ButtonStatus.OUTER_PRESSED
+        elif INNER_PRESSED:
+            return ButtonStatus.INNER_PRESSED
+        else:
+            return ButtonStatus.NONE_PRESSED
 
     def motor_command(self, motor_command):
         if motor_command is MotorCommand.STOP:
@@ -170,15 +169,14 @@ def loop(platforms):
 
         for status, platform in zip(statuses, platforms):
             # Enable manual button->motor control.
-            # TODO: is there a better way to do this?
             if status.button is ButtonStatus.OUTER_PRESSED:
                 logging.info("starting command sequence OUTER_STEP")
-                while platform.outer_button.is_pressed and not platform.inner_button.is_pressed:
+                while platform.get_button_status() is ButtonStatus.OUTER_PRESSED:
                     platform.motor_command(MotorCommand.OUTER_STEP)
                 logging.info("stopping command sequence OUTER_STEP")
             if status.button is ButtonStatus.INNER_PRESSED:
                 logging.info("starting command sequence INNER_STEP")
-                while platform.inner_button.is_pressed and not platform.outer_button.is_pressed:
+                while platform.get_button_status() is ButtonStatus.INNER_PRESSED:
                     platform.motor_command(MotorCommand.INNER_STEP)
                 logging.info("stopping command sequence INNER_STEP")
             elif status.button is ButtonStatus.BOTH_PRESSED:
