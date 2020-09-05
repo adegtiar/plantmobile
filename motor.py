@@ -8,8 +8,8 @@ from gpiozero import LED, Button
 
 
 class Direction(Enum):
-    cw = 0
-    ccw = 1
+    CW = 0
+    CCW = 1
 
 
 CCW_STEPS = (0, 1, 2, 3) # define power supply order for rotating anticlockwise
@@ -37,7 +37,7 @@ class StepperMotor(object):
         """Rotate the motor one period.
 
         Note: this is technically 4 steps for convenience of implementation."""
-        if direction == Direction.ccw:
+        if direction == Direction.CCW:
             steps = CCW_STEPS
         else:
             steps = CW_STEPS
@@ -68,11 +68,11 @@ def control_loop(motor, blue_button, blue_led, red_button, red_led):
         if blue_button.is_pressed:
             blue_led.on()
             red_led.off()
-            motor.move_step(Direction.ccw)
+            motor.move_step(Direction.CCW)
         elif red_button.is_pressed:
             red_led.on()
             blue_led.off()
-            motor.move_step(Direction.cw)
+            motor.move_step(Direction.CW)
         else:
             red_led.off()
             blue_led.off()

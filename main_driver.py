@@ -17,8 +17,8 @@ from motor import Direction, StepperMotor
 logging.basicConfig(level=logging.INFO)
 
 
-OUTER_DIRECTION = Direction.cw
-INNER_DIRECTION = Direction.ccw
+OUTER_DIRECTION = Direction.CW
+INNER_DIRECTION = Direction.CCW
 
 
 Status = namedtuple('Status', ['lux', 'button', 'position'])
