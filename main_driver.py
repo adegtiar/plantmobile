@@ -197,12 +197,12 @@ if __name__ == '__main__':
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
             logger=LightCsvLogger("data/car_sensor_log.csv"),
             motor=StepperMotor(27, 22, 10, 9),
-            outer_button=Button(16),
-            inner_button=Button(21),
+            outer_button=Button(21),
+            inner_button=Button(16),
             led_bar_graphs=LedBarGraphs(
-                data_pin=26, latch_pin=19, clock_pin=13, min_level=500, max_level=30000),
-            digit_display=DigitDisplay(clock_pin=5, data_pin=6),
-            led_shadow_indicator=LedShadowIndicator(outer_led_pin=12, inner_led_pin=20))
+                data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
+            digit_display=DigitDisplay(clock_pin=6, data_pin=13),
+            led_shadow_indicator=LedShadowIndicator(outer_led_pin=20, inner_led_pin=12))
 
 
     DC_CAR = PlatformDriver(

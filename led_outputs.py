@@ -61,10 +61,12 @@ class LedShadowIndicator(OutputIndicator):
         # If one sensor is much brighter than the other, then light up the corresponding LED.
         if abs(lux.diff_percent) >= LedShadowIndicator.DIFF_PERCENT_CUTOFF:
             if lux.outer > lux.inner:
+                logging.debug("lighting outer led")
                 self.outer_led.on()
                 self.inner_led.off()
             else:
                 assert lux.outer < lux.inner, "inconsistent lux reading"
+                logging.debug("lighting inner led")
                 self.inner_led.on()
                 self.outer_led.off()
         else:
@@ -166,7 +168,7 @@ class LedBarGraphs(OutputIndicator):
         self.set_levels(*[0]*self.num_graphs)
 
     def _update_lux(self, lux):
-        self.set_levels(lux.outer, lux.inner)
+        self.set_levels(lux.inner, lux.outer)
 
 
 if __name__ == '__main__': # Program entrance
