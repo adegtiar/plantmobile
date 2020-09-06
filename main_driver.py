@@ -35,7 +35,7 @@ class Direction(Enum):
 
 
 class Edge(Enum):
-    NONE = float("inf")
+    NONE = None
     OUTER = 0
     INNER = 620
 
@@ -45,6 +45,15 @@ class MotorCommand(Enum):
     OUTER_STEP = 1
     INNER_STEP = 2
     FIND_ORIGIN = 3
+
+    @property
+    def direction(self):
+        if self is MotorCommand.OUTER_STEP:
+            return Direction.OUTER
+        elif self is MotorCommand.INNER_STEP:
+            return Direction.INNER
+        else:
+            return None
 
 
 class PlatformDriver(object):
@@ -154,10 +163,9 @@ class PlatformDriver(object):
         logging.debug("sending command %s", command)
         if command is MotorCommand.STOP:
             self.motor.reset()
-        elif command is MotorCommand.OUTER_STEP:
-            direction = Direction.OUTER
-            self.motor.move_step(direction.motor_direction)
-            self._update_position(direction)
+        elif command in (MotorCommand.OUTER_STEP, MotorCommand.INNER_STEP):
+            self.motor.move_step(command.direction.motor_direction)
+            self._update_position(command.direction)
         elif command is MotorCommand.INNER_STEP:
             direction = Direction.INNER
             self.motor.move_step(direction.motor_direction)
