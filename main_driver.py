@@ -8,21 +8,36 @@ import time
 from enum import Enum
 from gpiozero import Button
 
+import motor
+
 from common import ButtonStatus, Status
 from led_outputs import LedBarGraphs, LedShadowIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
-from motor import Direction, StepperMotor
 from ultrasonic_ranging import DistanceSensor
 
 logging.basicConfig(level=logging.INFO)
 
 
-OUTER_DIRECTION = Direction.CW
-INNER_DIRECTION = Direction.CCW
+MAIN_LOOP_SLEEP_SECS = 0.5
 
-OUTER_EDGE = 0
-INNER_EDGE = 620
+
+class Direction(Enum):
+    OUTER = -1
+    INNER = +1
+
+    @property
+    def motor_direction(self):
+        if self is Direction.OUTER:
+            return motor.Direction.CW
+        elif self is Direction.INNER:
+            return motor.Direction.CCW
+
+
+class Edge(Enum):
+    NONE = float("inf")
+    OUTER = 0
+    INNER = 620
 
 
 class MotorCommand(Enum):
@@ -76,13 +91,15 @@ class PlatformDriver(object):
         if self.motor:
             self.motor.reset()
 
-    def update_status(self):
-        """Reads and processes the current lux from the sensors."""
-        lux = self.light_sensors.read()
-        self.logger.log(lux)
+    def get_status(self):
+        """Reads the current lux, button, position, and edge from sensors and state."""
+        return Status(
+                lux=self.light_sensors.read(), button=self.get_button_status(),
+                position=self.position, edge=self.get_edge_status())
 
-        status = Status(lux, self.get_button_status(), self.position, self.at_outer_edge())
-
+    def output_status(self, status):
+        """Updates the indicators and logs with the given status."""
+        self.logger.log(status.lux)
         for output in self.output_indicators:
             output.update_status(status)
 
@@ -101,36 +118,35 @@ class PlatformDriver(object):
         else:
             return ButtonStatus.NONE_PRESSED
 
-    def at_inner_edge(self):
-        return self.position == INNER_EDGE
+    def get_edge_status(self, skip_cache=False):
+        if self.position == Edge.INNER.value:
+            return Edge.INNER
 
-    def at_outer_edge(self, skip_cache=False):
         # Cache this value if we're not moving.
         if self._at_outer_edge_cached is None or skip_cache:
             self._at_outer_edge_cached = not self.distance_sensor.is_in_range()
             if self._at_outer_edge_cached:
-                logging.info("At edge. Setting position to zero.")
-                self._update_position(OUTER_EDGE)
-        return self._at_outer_edge_cached
+                logging.info("At outer edge. Setting position to zero.")
+                self._update_position(Edge.OUTER)
+        return Edge.OUTER if self._at_outer_edge_cached else Edge.NONE
 
     def _update_position(self, increment):
-        if increment == OUTER_EDGE:
+        if increment == Edge.OUTER:
             # Initialize the position to 0 at the edge.
             if self.position is None:
-                logging.info("Initializing edge position to {}".format(OUTER_EDGE))
+                logging.info("Initializing edge position to {}".format(Edge.OUTER))
             elif self.position != 0:
                 log = logging.info if abs(self.position) < 10 else logging.warning
-                log("Resetting edge position to {} (drift: {})".format(OUTER_EDGE, self.position))
-            self.position = OUTER_EDGE
-            # Since we're
-            self._at_outer_edge_cached = True
+                log("Resetting edge position to {} (drift: {})".format(Edge.OUTER, self.position))
+            self.position = Edge.OUTER.value
         else:
+            assert isinstance(increment, Direction), "Increment must be a Direction or Edge"
             # Clear the cached edge value, since we moved and it might have changed.
             self._at_outer_edge_cached = None
 
-        if self.position is not None:
-            # Increment the position if it's been set.
-            self.position += increment
+            if self.position is not None:
+                # Increment the position if it's been set.
+                self.position += increment.value
 
         if self._position_display:
             self._position_display.update_position(self.position)
@@ -140,17 +156,19 @@ class PlatformDriver(object):
         if command is MotorCommand.STOP:
             self.motor.reset()
         elif command is MotorCommand.OUTER_STEP:
-            if self.at_outer_edge(skip_cache=True):
+            if self.get_edge_status(skip_cache=True) is Edge.OUTER:
                 logging.info("skipping command OUTER_STEP: at edge")
                 return False
-            self.motor.move_step(OUTER_DIRECTION)
-            self._update_position(-1)
+            direction = Direction.OUTER
+            self.motor.move_step(direction.motor_direction)
+            self._update_position(direction)
         elif command is MotorCommand.INNER_STEP:
-            if self.at_inner_edge():
-                logging.info("skipping command OUTER_STEP: at edge")
+            if self.get_edge_status() is Edge.INNER:
+                logging.info("skipping command INNER_STEP: at edge")
                 return False
-            self.motor.move_step(INNER_DIRECTION)
-            self._update_position(+1)
+            direction = Direction.INNER
+            self.motor.move_step(direction.motor_direction)
+            self._update_position(direction)
         elif command is MotorCommand.FIND_ORIGIN:
             logging.warning("FIND_ORIGIN command not implemented")
             return False
@@ -195,38 +213,50 @@ def print_status(statuses):
     print("diff percent:\t" + tabbed_join(lambda lux: "{}%".format(lux.diff_percent)))
     print("button_status:\t" + "\t".join([status.button.name for status in statuses]))
     print("position:\t" + "\t".join([str(status.position) for status in statuses]))
-    print("at edge:\t" + "\t".join([str(status.at_edge) for status in statuses]))
+    print("at edge:\t" + "\t".join([str(status.edge) for status in statuses]))
     print()
 
 
 def loop(platforms):
+    partial_run = False
     while True:
-        statuses = [platform.update_status() for platform in platforms]
+        statuses = [platform.get_status() for platform in platforms]
 
-        print_status(statuses)
+        if not partial_run:
+            print_status(statuses)
 
         for status, platform in zip(statuses, platforms):
+            platform.output_status(status)
+
             # Enable manual button->motor control.
             if status.button is ButtonStatus.OUTER_PRESSED:
-                logging.info("starting command sequence OUTER_STEP")
-                can_run = True
-                while can_run and platform.get_button_status() is ButtonStatus.OUTER_PRESSED:
-                    can_run = platform.motor_command(MotorCommand.OUTER_STEP)
-                logging.info("stopping command sequence OUTER_STEP")
+                if not partial_run:
+                    logging.info("starting command sequence OUTER_STEP")
+                partial_run = platform.motor_command(MotorCommand.OUTER_STEP)
+                if not partial_run:
+                    logging.info("stopping command sequence OUTER_STEP")
             if status.button is ButtonStatus.INNER_PRESSED:
-                logging.info("starting command sequence INNER_STEP")
-                can_run = True
-                while can_run and platform.get_button_status() is ButtonStatus.INNER_PRESSED:
-                    can_run = platform.motor_command(MotorCommand.INNER_STEP)
-                logging.info("stopping command sequence INNER_STEP")
+                if not partial_run:
+                    logging.info("starting command sequence INNER_STEP")
+                partial_run = platform.motor_command(MotorCommand.INNER_STEP)
+                if not partial_run:
+                    logging.info("stopping command sequence INNER_STEP")
             elif status.button is ButtonStatus.BOTH_PRESSED:
                 logging.info("sending command FIND_ORIGIN")
                 platform.motor_command(MotorCommand.FIND_ORIGIN)
             elif status.button is ButtonStatus.NONE_PRESSED:
-                logging.debug("sending command STOP")
+                if partial_run:
+                    logging.info("sending command STOP")
+                    partial_run = False
+                else:
+                    logging.debug("sending command STOP")
                 platform.motor_command(MotorCommand.STOP)
+
         # TODO: do something with the luxes.
-        time.sleep(.5)
+
+        if not partial_run:
+            # Sleep if not in the middle of doing something, else immediately continue the loop.
+            time.sleep(MAIN_LOOP_SLEEP_SECS)
 
 
 if __name__ == '__main__':
@@ -234,7 +264,7 @@ if __name__ == '__main__':
             name="Stepper",
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
             logger=LightCsvLogger("data/car_sensor_log.csv"),
-            motor=StepperMotor(27, 22, 10, 9),
+            motor=motor.StepperMotor(27, 22, 10, 9),
             distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),

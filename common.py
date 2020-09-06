@@ -13,4 +13,4 @@ class ButtonStatus(Enum):
     BOTH_PRESSED = 3
 
 
-Status = namedtuple('Status', ['lux', 'button', 'position', 'at_edge'])
+Status = namedtuple('Status', ['lux', 'button', 'position', 'edge'])
