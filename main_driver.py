@@ -202,48 +202,65 @@ def cleanup(platforms):
     #GPIO.cleanup()
 
 
-def print_status(statuses):
-    luxes = [status.lux for status in statuses]
-    def tabbed_join(accessor):
-        return "\t".join(str(accessor(lux)) for lux in luxes)
-    print("sensor:\t\t" + tabbed_join(lambda lux: lux.name))
-    print("outer:\t\t" + tabbed_join(lambda lux: lux.outer))
-    print("inner:\t\t" + tabbed_join(lambda lux: lux.inner))
-    print("average:\t" + tabbed_join(lambda lux: lux.avg))
-    print("diff:\t\t" + tabbed_join(lambda lux: lux.diff))
-    print("diff percent:\t" + tabbed_join(lambda lux: "{}%".format(lux.diff_percent)))
-    print("button_status:\t" + "\t".join([status.button.name for status in statuses]))
-    print("position:\t" + "\t".join([str(status.position) for status in statuses]))
-    print("at edge:\t" + "\t".join([str(status.edge) for status in statuses]))
-    print()
+class StatusPrinter(object):
+
+    def __init__(self, print_interval=MAIN_LOOP_SLEEP_SECS):
+        self.print_interval = print_interval
+        self._last_printed_time = float("-inf")
+
+    def print_status(self, statuses):
+        if time.time() - self._last_printed_time < self.print_interval:
+            return
+
+        luxes = [status.lux for status in statuses]
+        def tabbed_join(accessor):
+            return "\t".join(str(accessor(lux)) for lux in luxes)
+        print("sensor:\t\t" + tabbed_join(lambda lux: lux.name))
+        print("outer:\t\t" + tabbed_join(lambda lux: lux.outer))
+        print("inner:\t\t" + tabbed_join(lambda lux: lux.inner))
+        print("average:\t" + tabbed_join(lambda lux: lux.avg))
+        print("diff:\t\t" + tabbed_join(lambda lux: lux.diff))
+        print("diff percent:\t" + tabbed_join(lambda lux: "{}%".format(lux.diff_percent)))
+        print("button_status:\t" + "\t".join([status.button.name for status in statuses]))
+        print("position:\t" + "\t".join([str(status.position) for status in statuses]))
+        print("at edge:\t" + "\t".join([str(status.edge) for status in statuses]))
+        print()
+        self._last_printed_time = time.time()
 
 
 def loop(platforms):
+    printer = StatusPrinter()
+
     while True:
         statuses = [platform.get_status() for platform in platforms]
 
-        print_status(statuses)
+        printer.print_status(statuses)
 
-        for status, platform in zip(statuses, platforms):
+        for i, (status, platform) in enumerate(zip(statuses, platforms)):
             platform.output_status(status)
 
             # Enable manual button->motor control.
-            logging.info("starting command for %s", status.button)
-            while status.button is ButtonStatus.OUTER_PRESSED:
-                if status.edge is Edge.OUTER:
-                    logging.info("stopping command sequence OUTER_STEP: at outer edge")
-                    break
-                else:
-                    platform.motor_command(MotorCommand.OUTER_STEP)
-                # When moving towards the edge, reset our position if we've drifted.
-                status = platform.get_status(reset_position_on_edge=True)
-            while status.button is ButtonStatus.INNER_PRESSED:
-                if status.edge is Edge.INNER:
-                    logging.info("stopping command sequence INNER_STEP: at inner edge")
-                    break
-                else:
-                    platform.motor_command(MotorCommand.INNER_STEP)
-                status = platform.get_status()
+            if status.button in (ButtonStatus.OUTER_PRESSED, ButtonStatus.INNER_PRESSED):
+                logging.info("starting command for %s", status.button)
+                while status.button is ButtonStatus.OUTER_PRESSED:
+                    if status.edge is Edge.OUTER:
+                        logging.info("stopping command sequence OUTER_STEP: at outer edge")
+                        break
+                    else:
+                        platform.motor_command(MotorCommand.OUTER_STEP)
+                    # When moving towards the edge, reset our position if we've drifted.
+                    status = platform.get_status(reset_position_on_edge=True)
+                    statuses[i] = status
+                    printer.print_status(statuses)
+                while status.button is ButtonStatus.INNER_PRESSED:
+                    if status.edge is Edge.INNER:
+                        logging.info("stopping command sequence INNER_STEP: at inner edge")
+                        break
+                    else:
+                        platform.motor_command(MotorCommand.INNER_STEP)
+                    status = platform.get_status()
+                    statuses[i] = status
+                    printer.print_status(statuses)
             if status.button is ButtonStatus.BOTH_PRESSED:
                 platform.motor_command(MotorCommand.FIND_ORIGIN)
             elif status.button is ButtonStatus.NONE_PRESSED:
@@ -251,7 +268,6 @@ def loop(platforms):
 
         # TODO: do something with the luxes.
 
-        # Sleep if not in the middle of doing something, else immediately continue the loop.
         time.sleep(MAIN_LOOP_SLEEP_SECS)
 
 
