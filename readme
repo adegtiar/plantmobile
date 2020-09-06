@@ -1,2 +1,4 @@
 Dependencies
 pip install raspberrypi-tm1637
+pip3 install adafruit-circuitpython-hcsr04
+sudo apt install libgpiod2
