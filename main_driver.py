@@ -116,6 +116,11 @@ class PlatformDriver(object):
     def _update_position(self, increment):
         if increment == OUTER_EDGE:
             # Initialize the position to 0 at the edge.
+            if self.position is None:
+                logging.info("Initializing edge position to {}".format(OUTER_EDGE))
+            elif self.position != 0:
+                log = logging.info if abs(self.position) < 10 else logging.warning
+                log("Resetting edge position to {} (drift: {})".format(OUTER_EDGE, self.position))
             self.position = OUTER_EDGE
             # Since we're
             self._at_outer_edge_cached = True
@@ -130,27 +135,27 @@ class PlatformDriver(object):
         if self._position_display:
             self._position_display.update_position(self.position)
 
-    def motor_command(self, motor_command):
+    def motor_command(self, command):
         """Returns if the command was able to be run."""
-        if motor_command is MotorCommand.STOP:
+        if command is MotorCommand.STOP:
             self.motor.reset()
-        elif motor_command is MotorCommand.OUTER_STEP:
+        elif command is MotorCommand.OUTER_STEP:
             if self.at_outer_edge(skip_cache=True):
                 logging.info("skipping command OUTER_STEP: at edge")
                 return False
             self.motor.move_step(OUTER_DIRECTION)
             self._update_position(-1)
-        elif motor_command is MotorCommand.INNER_STEP:
+        elif command is MotorCommand.INNER_STEP:
             if self.at_inner_edge():
                 logging.info("skipping command OUTER_STEP: at edge")
                 return False
             self.motor.move_step(INNER_DIRECTION)
             self._update_position(+1)
-        elif motor_command is MotorCommand.FIND_ORIGIN:
+        elif command is MotorCommand.FIND_ORIGIN:
             logging.warning("FIND_ORIGIN command not implemented")
             return False
         else:
-            assert False, "motor command {} not supported".format(motor_command)
+            assert False, "motor command {} not supported".format(command)
         return True
 
 
