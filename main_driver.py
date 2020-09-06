@@ -42,24 +42,15 @@ class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
     def __init__(self, name, light_sensors, logger,
-            motor=None, outer_button=None, inner_button=None,
-            led_bar_graphs=None, digit_display=None, led_shadow_indicator=None):
+            motor=None, outer_button=None, inner_button=None, output_indicators=None):
         self.name = name
         self.light_sensors = light_sensors
         self.logger = logger
         self.motor = motor
         self.outer_button = outer_button
         self.inner_button = inner_button
-        self.position = None
-
-        output_indicators = []
-        if led_bar_graphs:
-            output_indicators.append(led_bar_graphs)
-        if digit_display:
-            output_indicators.append(digit_display)
-        if led_shadow_indicator:
-            output_indicators.append(led_shadow_indicator)
         self.output_indicators = output_indicators
+        self.position = 0
 
     def setup(self):
         """Initialize all components of the platform.
@@ -89,12 +80,13 @@ class PlatformDriver(object):
         lux = self.light_sensors.read()
         self.logger.log(lux)
 
-        for output in self.output_indicators:
-            output.update_lux(lux)
-
         button_status = self.get_button_status()
+        status = Status(lux, button=button_status, position=self.position)
 
-        return Status(lux, button=button_status, position=self.position)
+        for output in self.output_indicators:
+            output.update_status(status)
+
+        return status
 
     def get_button_status(self):
         OUTER_PRESSED = self.outer_button.is_pressed if self.outer_button else False
@@ -114,8 +106,10 @@ class PlatformDriver(object):
             self.motor.reset()
         elif motor_command is MotorCommand.OUTER_STEP:
             self.motor.move_step(OUTER_DIRECTION)
+            self.position -= 1
         elif motor_command is MotorCommand.INNER_STEP:
             self.motor.move_step(INNER_DIRECTION)
+            self.position += 1
         elif motor_command is MotorCommand.FIND_ORIGIN:
             logging.warning("FIND_ORIGIN command not implemented")
         else:
@@ -197,10 +191,12 @@ if __name__ == '__main__':
             motor=StepperMotor(27, 22, 10, 9),
             outer_button=Button(21),
             inner_button=Button(16),
-            led_bar_graphs=LedBarGraphs(
-                data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
-            digit_display=DigitDisplay(clock_pin=6, data_pin=13),
-            led_shadow_indicator=LedShadowIndicator(outer_led_pin=20, inner_led_pin=12))
+            output_indicators=[
+                LedBarGraphs(data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
+                DigitDisplay(clock_pin=6, data_pin=13, display_func=lambda s: s.lux.diff_percent),
+                DigitDisplay(clock_pin=19, data_pin=26, display_func=lambda s: s.position),
+                LedShadowIndicator(outer_led_pin=20, inner_led_pin=12),
+            ])
 
 
     DC_CAR = PlatformDriver(

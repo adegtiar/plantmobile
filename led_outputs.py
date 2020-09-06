@@ -24,14 +24,14 @@ class OutputIndicator(ABC):
         pass
 
     @abstractmethod
-    def _update_lux(self, lux):
+    def _update_status(self, status):
         pass
 
-    def update_lux(self, lux):
-        if lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
+    def update_status(self, status):
+        if status.lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
             self.reset()
         else:
-            self._update_lux(lux)
+            self._update_status(status)
 
 
 class LedShadowIndicator(OutputIndicator):
@@ -56,8 +56,9 @@ class LedShadowIndicator(OutputIndicator):
         if self.inner_led:
             self.inner_led.off()
 
-    def _update_lux(self, lux):
+    def _update_status(self, status):
         self.setup()
+        lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
         if abs(lux.diff_percent) >= LedShadowIndicator.DIFF_PERCENT_CUTOFF:
             if lux.outer > lux.inner:
@@ -77,18 +78,19 @@ class LedShadowIndicator(OutputIndicator):
 class DigitDisplay(OutputIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin, data_pin, brightness=2):
+    def __init__(self, clock_pin, data_pin, display_func, brightness=2):
         self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
         # The brightness of the display, from 0-7
         self.brightness=brightness
+        self._display_func = display_func
 
     def setup(self):
         self._display.brightness(self.brightness)
         self.reset()
 
-    def _update_lux(self, lux):
+    def _update_status(self, status):
         """Displays the percent difference of the light reading."""
-        self._display.number(lux.diff_percent)
+        self._display.number(self._display_func(status))
 
     def reset(self):
         """Reset the display to an empty state."""
@@ -167,8 +169,8 @@ class LedBarGraphs(OutputIndicator):
         logging.debug("Resetting graphs to empty...")
         self.set_levels(*[0]*self.num_graphs)
 
-    def _update_lux(self, lux):
-        self.set_levels(lux.inner, lux.outer)
+    def _update_status(self, status):
+        self.set_levels(status.lux.inner, status.lux.outer)
 
 
 if __name__ == '__main__': # Program entrance
