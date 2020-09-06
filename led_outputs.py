@@ -28,7 +28,7 @@ class OutputIndicator(ABC):
         pass
 
     def update_status(self, status):
-        if status.lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
+        if status.lux and status.lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
             self.reset()
         else:
             self._update_status(status)
@@ -78,11 +78,10 @@ class LedShadowIndicator(OutputIndicator):
 class DigitDisplay(OutputIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin, data_pin, display_func, brightness=2):
+    def __init__(self, clock_pin, data_pin, brightness=2):
         self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
         # The brightness of the display, from 0-7
         self.brightness=brightness
-        self._display_func = display_func
 
     def setup(self):
         self._display.brightness(self.brightness)
@@ -90,11 +89,25 @@ class DigitDisplay(OutputIndicator):
 
     def _update_status(self, status):
         """Displays the percent difference of the light reading."""
-        self._display.number(self._display_func(status))
+        self._display.number(self._get_number_output(status))
+
+    @abstractmethod
+    def _get_number_output(self, status):
+        pass
 
     def reset(self):
         """Reset the display to an empty state."""
         self._display.show("    ")
+
+
+class LuxDiffDisplay(DigitDisplay):
+    def _get_number_output(self, status):
+        return status.lux.diff_percent
+
+
+class PositionDisplay(DigitDisplay):
+    def _get_number_output(self, status):
+        return status.position
 
 
 class LedBarGraphs(OutputIndicator):
