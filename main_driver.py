@@ -101,19 +101,22 @@ class PlatformDriver(object):
         else:
             return ButtonStatus.NONE_PRESSED
 
+    def at_inner_edge(self):
+        return self.position == INNER_EDGE
+
     def at_outer_edge(self, skip_cache=False):
         # Cache this value if we're not moving.
         if self._at_outer_edge_cached is None or skip_cache:
             self._at_outer_edge_cached = not self.distance_sensor.is_in_range()
             if self._at_outer_edge_cached:
                 logging.info("At edge. Setting position to zero.")
-                self._update_position(0)
+                self._update_position(OUTER_EDGE)
         return self._at_outer_edge_cached
 
     def _update_position(self, increment):
-        if increment == 0:
+        if increment == OUTER_EDGE:
             # Initialize the position to 0 at the edge.
-            self.position = 0
+            self.position = OUTER_EDGE
             # Since we're
             self._at_outer_edge_cached = True
         else:
@@ -128,21 +131,27 @@ class PlatformDriver(object):
             self._position_display.update_position(self.position)
 
     def motor_command(self, motor_command):
+        """Returns if the command was able to be run."""
         if motor_command is MotorCommand.STOP:
             self.motor.reset()
         elif motor_command is MotorCommand.OUTER_STEP:
             if self.at_outer_edge(skip_cache=True):
                 logging.info("skipping command OUTER_STEP: at edge")
-                return
+                return False
             self.motor.move_step(OUTER_DIRECTION)
             self._update_position(-1)
         elif motor_command is MotorCommand.INNER_STEP:
+            if self.at_inner_edge():
+                logging.info("skipping command OUTER_STEP: at edge")
+                return False
             self.motor.move_step(INNER_DIRECTION)
             self._update_position(+1)
         elif motor_command is MotorCommand.FIND_ORIGIN:
             logging.warning("FIND_ORIGIN command not implemented")
+            return False
         else:
             assert False, "motor command {} not supported".format(motor_command)
+        return True
 
 
 def setup(platforms):
@@ -194,17 +203,16 @@ def loop(platforms):
         for status, platform in zip(statuses, platforms):
             # Enable manual button->motor control.
             if status.button is ButtonStatus.OUTER_PRESSED:
-                if platform.at_outer_edge():
-                    print("skipping command OUTER_STEP: at edge")
-                    continue
                 logging.info("starting command sequence OUTER_STEP")
-                while platform.get_button_status() is ButtonStatus.OUTER_PRESSED:
-                    platform.motor_command(MotorCommand.OUTER_STEP)
+                can_run = True
+                while can_run and platform.get_button_status() is ButtonStatus.OUTER_PRESSED:
+                    can_run = platform.motor_command(MotorCommand.OUTER_STEP)
                 logging.info("stopping command sequence OUTER_STEP")
             if status.button is ButtonStatus.INNER_PRESSED:
                 logging.info("starting command sequence INNER_STEP")
-                while platform.get_button_status() is ButtonStatus.INNER_PRESSED:
-                    platform.motor_command(MotorCommand.INNER_STEP)
+                can_run = True
+                while can_run and platform.get_button_status() is ButtonStatus.INNER_PRESSED:
+                    can_run = platform.motor_command(MotorCommand.INNER_STEP)
                 logging.info("stopping command sequence INNER_STEP")
             elif status.button is ButtonStatus.BOTH_PRESSED:
                 logging.info("sending command FIND_ORIGIN")
