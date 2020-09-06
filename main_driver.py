@@ -5,10 +5,10 @@ import RPi.GPIO as GPIO
 import sys
 import time
 
-from collections import namedtuple
 from enum import Enum
 from gpiozero import Button
 
+from common import ButtonStatus, Status
 from led_outputs import LedBarGraphs, LedShadowIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
@@ -21,8 +21,8 @@ logging.basicConfig(level=logging.INFO)
 OUTER_DIRECTION = Direction.CW
 INNER_DIRECTION = Direction.CCW
 
-
-Status = namedtuple('Status', ['lux', 'button', 'position', 'at_edge'])
+OUTER_EDGE = 0
+INNER_EDGE = 620
 
 
 class MotorCommand(Enum):
@@ -30,13 +30,6 @@ class MotorCommand(Enum):
     OUTER_STEP = 1
     INNER_STEP = 2
     FIND_ORIGIN = 3
-
-
-class ButtonStatus(Enum):
-    NONE_PRESSED = 0
-    OUTER_PRESSED = 1
-    INNER_PRESSED = 2
-    BOTH_PRESSED = 3
 
 
 class PlatformDriver(object):
@@ -57,7 +50,8 @@ class PlatformDriver(object):
             if isinstance(output, PositionDisplay):
                 self._position_display = output
                 break
-        self.position = 0
+        self.position = None
+        self._at_outer_edge_cached = None
 
     def setup(self):
         """Initialize all components of the platform.
@@ -87,15 +81,12 @@ class PlatformDriver(object):
         lux = self.light_sensors.read()
         self.logger.log(lux)
 
-        status = Status(lux, self.get_button_status(), self.position, self.is_at_edge())
+        status = Status(lux, self.get_button_status(), self.position, self.at_outer_edge())
 
         for output in self.output_indicators:
             output.update_status(status)
 
         return status
-
-    def is_at_edge(self):
-        return not self.distance_sensor.is_in_range()
 
     def get_button_status(self):
         OUTER_PRESSED = self.outer_button.is_pressed if self.outer_button else False
@@ -110,20 +101,44 @@ class PlatformDriver(object):
         else:
             return ButtonStatus.NONE_PRESSED
 
-    def _update_position(self, position):
-        self.position = position
+    def at_outer_edge(self, skip_cache=False):
+        # Cache this value if we're not moving.
+        if self._at_outer_edge_cached is None or skip_cache:
+            self._at_outer_edge_cached = not self.distance_sensor.is_in_range()
+            if self._at_outer_edge_cached:
+                logging.info("At edge. Setting position to zero.")
+                self._update_position(0)
+        return self._at_outer_edge_cached
+
+    def _update_position(self, increment):
+        if increment == 0:
+            # Initialize the position to 0 at the edge.
+            self.position = 0
+            # Since we're
+            self._at_outer_edge_cached = True
+        else:
+            # Clear the cached edge value, since we moved and it might have changed.
+            self._at_outer_edge_cached = None
+
+        if self.position is not None:
+            # Increment the position if it's been set.
+            self.position += increment
+
         if self._position_display:
-            self._position_display.update_status(Status(None, None, position, None))
+            self._position_display.update_position(self.position)
 
     def motor_command(self, motor_command):
         if motor_command is MotorCommand.STOP:
             self.motor.reset()
         elif motor_command is MotorCommand.OUTER_STEP:
+            if self.at_outer_edge(skip_cache=True):
+                logging.info("skipping command OUTER_STEP: at edge")
+                return
             self.motor.move_step(OUTER_DIRECTION)
-            self._update_position(self.position - 1)
+            self._update_position(-1)
         elif motor_command is MotorCommand.INNER_STEP:
             self.motor.move_step(INNER_DIRECTION)
-            self._update_position(self.position + 1)
+            self._update_position(+1)
         elif motor_command is MotorCommand.FIND_ORIGIN:
             logging.warning("FIND_ORIGIN command not implemented")
         else:
@@ -179,6 +194,9 @@ def loop(platforms):
         for status, platform in zip(statuses, platforms):
             # Enable manual button->motor control.
             if status.button is ButtonStatus.OUTER_PRESSED:
+                if platform.at_outer_edge():
+                    print("skipping command OUTER_STEP: at edge")
+                    continue
                 logging.info("starting command sequence OUTER_STEP")
                 while platform.get_button_status() is ButtonStatus.OUTER_PRESSED:
                     platform.motor_command(MotorCommand.OUTER_STEP)

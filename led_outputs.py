@@ -9,6 +9,8 @@ import tm1637
 from abc import ABC, abstractmethod
 from gpiozero import LED
 
+from common import Status
+
 
 class OutputIndicator(ABC):
     # The minimum average lux at which it will output anything.
@@ -28,7 +30,7 @@ class OutputIndicator(ABC):
         pass
 
     def update_status(self, status):
-        if status.lux and status.lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
+        if status.lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
             self.reset()
         else:
             self._update_status(status)
@@ -89,7 +91,11 @@ class DigitDisplay(OutputIndicator):
 
     def _update_status(self, status):
         """Displays the percent difference of the light reading."""
-        self._display.number(self._get_number_output(status))
+        output = self._get_number_output(status)
+        if output is not None:
+            self._display.number(output)
+        else:
+            self._display.show("    ")
 
     @abstractmethod
     def _get_number_output(self, status):
@@ -108,6 +114,9 @@ class LuxDiffDisplay(DigitDisplay):
 class PositionDisplay(DigitDisplay):
     def _get_number_output(self, status):
         return status.position
+
+    def update_position(self, position):
+        self._update_status(Status(None, None, position, None))
 
 
 class LedBarGraphs(OutputIndicator):

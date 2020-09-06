@@ -6,15 +6,10 @@ import board
 import busio
 import logging
 
-from collections import namedtuple
 from datetime import datetime
 from numpy import mean
 
-
-# A reading of light sensor data.
-SensorReading = namedtuple('SensorReading',
-        ['outer', 'inner', 'avg', 'diff', 'diff_percent', 'timestamp', 'name'])
-
+from common import LuxReading
 
 # Read lux data from a pair of sensors connected to multiplexer.
 class LightSensorReader(object):
@@ -58,4 +53,4 @@ class LightSensorReader(object):
         avg = int(mean((outer, inner)))
         diff = outer - inner
         diff_percent = int(diff/avg * 100) if avg else 0
-        return SensorReading(outer, inner, avg, diff, diff_percent, timestamp, self.name)
+        return LuxReading(outer, inner, avg, diff, diff_percent, timestamp, self.name)
