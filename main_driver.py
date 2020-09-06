@@ -13,6 +13,7 @@ from led_outputs import LedBarGraphs, LedShadowIndicator, LuxDiffDisplay, Positi
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 from motor import Direction, StepperMotor
+from ultrasonic_ranging import DistanceSensor
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,7 +22,7 @@ OUTER_DIRECTION = Direction.CW
 INNER_DIRECTION = Direction.CCW
 
 
-Status = namedtuple('Status', ['lux', 'button', 'position'])
+Status = namedtuple('Status', ['lux', 'button', 'position', 'at_edge'])
 
 
 class MotorCommand(Enum):
@@ -41,12 +42,13 @@ class ButtonStatus(Enum):
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
-    def __init__(self, name, light_sensors, logger,
-            motor=None, outer_button=None, inner_button=None, output_indicators=()):
+    def __init__(self, name, light_sensors, logger, motor=None, distance_sensor=None,
+            outer_button=None, inner_button=None, output_indicators=()):
         self.name = name
         self.light_sensors = light_sensors
         self.logger = logger
         self.motor = motor
+        self.distance_sensor = distance_sensor
         self.outer_button = outer_button
         self.inner_button = inner_button
         self.output_indicators = output_indicators
@@ -85,13 +87,15 @@ class PlatformDriver(object):
         lux = self.light_sensors.read()
         self.logger.log(lux)
 
-        button_status = self.get_button_status()
-        status = Status(lux, button=button_status, position=self.position)
+        status = Status(lux, self.get_button_status(), self.position, self.is_at_edge())
 
         for output in self.output_indicators:
             output.update_status(status)
 
         return status
+
+    def is_at_edge(self):
+        return not self.distance_sensor.is_in_range()
 
     def get_button_status(self):
         OUTER_PRESSED = self.outer_button.is_pressed if self.outer_button else False
@@ -109,7 +113,7 @@ class PlatformDriver(object):
     def _update_position(self, position):
         self.position = position
         if self._position_display:
-            self._position_display.update_status(Status(None, None, position))
+            self._position_display.update_status(Status(None, None, position, None))
 
     def motor_command(self, motor_command):
         if motor_command is MotorCommand.STOP:
@@ -162,6 +166,7 @@ def print_status(statuses):
     print("diff percent:\t" + tabbed_join(lambda lux: "{}%".format(lux.diff_percent)))
     print("button_status:\t" + "\t".join([status.button.name for status in statuses]))
     print("position:\t" + "\t".join([str(status.position) for status in statuses]))
+    print("at edge:\t" + "\t".join([str(status.at_edge) for status in statuses]))
     print()
 
 
@@ -199,6 +204,7 @@ if __name__ == '__main__':
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
             logger=LightCsvLogger("data/car_sensor_log.csv"),
             motor=StepperMotor(27, 22, 10, 9),
+            distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),
             output_indicators=[
