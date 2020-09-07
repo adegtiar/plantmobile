@@ -115,7 +115,7 @@ class PlatformDriver(object):
         """Updates the indicators and logs with the given status."""
         self.logger.log(status.lux)
         for output in self.output_indicators:
-            output.update_status(status)
+            output.output_status(status)
 
         return status
 
@@ -214,7 +214,7 @@ class StatusPrinter(Output):
     def off(self):
         pass
 
-    def update_status(self, status):
+    def output_status(self, status):
         if time.time() - self._last_printed_time < self.print_interval:
             return
 

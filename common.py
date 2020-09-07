@@ -33,5 +33,5 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def update_status(self, status):
+    def output_status(self, status):
         pass

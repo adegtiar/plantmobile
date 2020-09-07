@@ -18,14 +18,14 @@ class LedIndicator(Output):
     MIN_OUTPUT_LUX = 10
 
     @abstractmethod
-    def _update_status(self, status):
+    def _output_status(self, status):
         pass
 
-    def update_status(self, status):
+    def output_status(self, status):
         if status.lux.avg < LedIndicator.MIN_OUTPUT_LUX:
             self.off()
         else:
-            self._update_status(status)
+            self._output_status(status)
 
 
 class LedShadowIndicator(LedIndicator):
@@ -50,7 +50,7 @@ class LedShadowIndicator(LedIndicator):
         if self.inner_led:
             self.inner_led.off()
 
-    def _update_status(self, status):
+    def _output_status(self, status):
         self.setup()
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
@@ -81,7 +81,7 @@ class DigitDisplay(LedIndicator):
         self._display.brightness(self.brightness)
         self.off()
 
-    def _update_status(self, status):
+    def _output_status(self, status):
         """Displays the percent difference of the light reading."""
         output = self._get_number_output(status)
         if output is not None:
@@ -108,7 +108,7 @@ class PositionDisplay(DigitDisplay):
         return status.position
 
     def update_position(self, position):
-        self._update_status(Status(None, None, position, None))
+        self._output_status(Status(None, None, position, None))
 
 
 class LedBarGraphs(LedIndicator):
@@ -183,7 +183,7 @@ class LedBarGraphs(LedIndicator):
         logging.debug("Resetting graphs to empty...")
         self.set_levels(*[0]*self.num_graphs)
 
-    def _update_status(self, status):
+    def _output_status(self, status):
         self.set_levels(status.lux.inner, status.lux.outer)
 
 
