@@ -33,6 +33,11 @@ class StepperMotor(object):
         for pin in self.pins:
             GPIO.output(pin, GPIO.LOW)
 
+    def all_on(self):
+        """Set all the outputs of the motor to high. Only useful for lights."""
+        for pin in self.pins:
+            GPIO.output(pin, GPIO.HIGH)
+
     def move_step(self, direction):
         """Rotate the motor one period.
 

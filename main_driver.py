@@ -167,8 +167,10 @@ class PlatformDriver(object):
     def blink(self, times=2, pause_secs=0.2):
         for i in range(times):
             self._direction_leds.on()
+            self.motor.all_on()
             time.sleep(pause_secs)
             self._direction_leds.off()
+            self.motor.off()
             if i != times-1:
                 time.sleep(pause_secs)
 
