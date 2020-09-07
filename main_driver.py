@@ -45,21 +45,6 @@ class Edge(Enum):
     INNER = 640
 
 
-class MotorCommand(Enum):
-    STOP = 0
-    OUTER_STEP = 1
-    INNER_STEP = 2
-
-    @property
-    def direction(self):
-        if self is MotorCommand.OUTER_STEP:
-            return Direction.OUTER
-        elif self is MotorCommand.INNER_STEP:
-            return Direction.INNER
-        else:
-            return None
-
-
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
