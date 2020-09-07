@@ -147,9 +147,10 @@ class PlatformDriver(object):
         if self._position_display:
             self._position_display.update_position(self.position)
 
-    def move_direction(self, status, direction, continue_checker):
+    def move_direction(self, direction, should_continue):
         logging.info("starting sequence move towards %s", direction)
-        while continue_checker(status):
+        status = self.get_status()
+        while should_continue(status):
             if status.edge is direction.extreme_edge:
                 logging.info("stopping sequence move towards %s: at edge", direction)
                 return
@@ -160,6 +161,7 @@ class PlatformDriver(object):
             # When moving towards the edge, reset our position if we've drifted.
             status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
             self.output_status(status)
+
         logging.info("stopping sequence move towards %s: stopped", direction)
 
 
@@ -217,23 +219,39 @@ class StatusPrinter(Output):
 
 
 def loop(platform):
-    auto_mode = False
+    manual_mode = True
+
+    def keep_moving_outer(status):
+        if manual_mode:
+            return status.button is ButtonStatus.OUTER_PRESSED
+        else:
+            return status.button is ButtonStatus.NONE_PRESSED
+
+    def keep_moving_inner(status):
+        if manual_mode:
+            return status.button is ButtonStatus.INNER_PRESSED
+        else:
+            return status.button is ButtonStatus.NONE_PRESSED
+
     while True:
         status = platform.get_status()
         platform.output_status(status)
 
         # Enable manual button->motor control.
         if status.button is ButtonStatus.OUTER_PRESSED:
-            continue_checker = lambda s: auto_mode or s.button is ButtonStatus.OUTER_PRESSED
-            platform.move_direction(status, Direction.OUTER, continue_checker)
+            if not manual_mode:
+                platform._direction_leds.blink()
+            platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
         if status.button is ButtonStatus.INNER_PRESSED:
-            continue_checker = lambda s: auto_mode or s.button is ButtonStatus.INNER_PRESSED
-            platform.move_direction(status, Direction.INNER, continue_checker)
+            if not manual_mode:
+                platform._direction_leds.blink()
+            platform.move_direction(Direction.INNER, should_continue=keep_moving_inner)
         if status.button is ButtonStatus.BOTH_PRESSED:
             # Toggle between manual mode and auto mode.
             platform._direction_leds.blink()
-            platform.move_direction(status, Direction.OUTER, lambda _: not auto_mode)
-            auto_mode = not auto_mode
+            manual_mode = not manual_mode
+            if not manual_mode:
+                platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
         elif status.button is ButtonStatus.NONE_PRESSED:
             platform.motor.off()
 

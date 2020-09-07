@@ -68,15 +68,16 @@ class LedDirectionIndicator(LedIndicator):
             self.inner_led.off()
             self.outer_led.off()
 
-    def blink(self):
+    def blink(self, times=2, pause=0.2):
         self.setup()
-        for _ in range(2):
+        for i in range(times):
             self.outer_led.on()
             self.inner_led.on()
-            time.sleep(0.5)
+            time.sleep(pause)
             self.outer_led.off()
             self.inner_led.off()
-            time.sleep(0.5)
+            if i != times-1:
+                time.sleep(pause)
 
 
 class DigitDisplay(LedIndicator):
