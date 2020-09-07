@@ -28,7 +28,7 @@ class LedIndicator(Output):
             self._output_status(status)
 
 
-class LedShadowIndicator(LedIndicator):
+class LedDirectionIndicator(LedIndicator):
     DIFF_PERCENT_CUTOFF = 100
 
     def __init__(self, outer_led_pin, inner_led_pin):
@@ -54,7 +54,7 @@ class LedShadowIndicator(LedIndicator):
         self.setup()
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
-        if abs(lux.diff_percent) >= LedShadowIndicator.DIFF_PERCENT_CUTOFF:
+        if abs(lux.diff_percent) >= LedDirectionIndicator.DIFF_PERCENT_CUTOFF:
             if lux.outer > lux.inner:
                 logging.debug("lighting outer led")
                 self.outer_led.on()
@@ -67,6 +67,16 @@ class LedShadowIndicator(LedIndicator):
         else:
             self.inner_led.off()
             self.outer_led.off()
+
+    def blink(self):
+        self.setup()
+        for _ in range(2):
+            self.outer_led.on()
+            self.inner_led.on()
+            time.sleep(0.5)
+            self.outer_led.off()
+            self.inner_led.off()
+            time.sleep(0.5)
 
 
 class DigitDisplay(LedIndicator):

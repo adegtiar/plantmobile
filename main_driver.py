@@ -11,7 +11,7 @@ from gpiozero import Button
 import motor
 
 from common import ButtonStatus, Output, Status
-from led_outputs import LedBarGraphs, LedShadowIndicator, LuxDiffDisplay, PositionDisplay
+from led_outputs import LedBarGraphs, LedDirectionIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
 from ultrasonic_ranging import DistanceSensor
@@ -49,15 +49,19 @@ class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
     def __init__(self, name, light_sensors, motor=None, distance_sensor=None,
-            outer_button=None, inner_button=None, outputs=()):
+            direction_leds=None, outer_button=None, inner_button=None, outputs=()):
         self.name = name
         self.light_sensors = light_sensors
         self.motor = motor
         self.distance_sensor = distance_sensor
         self.outer_button = outer_button
         self.inner_button = inner_button
-        self.outputs = outputs
+        self.outputs = list(outputs)
         self._position_display = None
+        self._direction_leds = direction_leds
+        if direction_leds:
+            self.outputs.append(direction_leds)
+
         for output in outputs:
             if isinstance(output, PositionDisplay):
                 self._position_display = output
@@ -227,6 +231,7 @@ def loop(platform):
             platform.move_direction(status, Direction.INNER, continue_checker)
         if status.button is ButtonStatus.BOTH_PRESSED:
             # Toggle between manual mode and auto mode.
+            platform._direction_leds.blink()
             platform.move_direction(status, Direction.OUTER, lambda _: not auto_mode)
             auto_mode = not auto_mode
         elif status.button is ButtonStatus.NONE_PRESSED:
@@ -245,12 +250,12 @@ if __name__ == '__main__':
             distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),
+            direction_leds=LedDirectionIndicator(outer_led_pin=20, inner_led_pin=12),
             outputs=[
                 LightCsvLogger("data/car_sensor_log.csv"),
                 LedBarGraphs(data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
                 LuxDiffDisplay(clock_pin=6, data_pin=13),
                 PositionDisplay(clock_pin=19, data_pin=26),
-                LedShadowIndicator(outer_led_pin=20, inner_led_pin=12),
                 StatusPrinter(),
             ])
 
