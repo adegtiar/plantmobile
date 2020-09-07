@@ -28,23 +28,27 @@ class Direction(Enum):
 
     @property
     def motor_direction(self):
-        if self is Direction.OUTER:
-            return motor.Direction.CW
-        elif self is Direction.INNER:
-            return motor.Direction.CCW
+        return motor.Direction.CW if self is Direction.OUTER else motor.Direction.CCW
+
+    @property
+    def extreme_edge(self):
+        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
+
+    @property
+    def extreme_edge(self):
+        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
 
 
 class Edge(Enum):
     NONE = None
     OUTER = 0
-    INNER = 620
+    INNER = 640
 
 
 class MotorCommand(Enum):
     STOP = 0
     OUTER_STEP = 1
     INNER_STEP = 2
-    FIND_ORIGIN = 3
 
     @property
     def direction(self):
@@ -158,24 +162,20 @@ class PlatformDriver(object):
         if self._position_display:
             self._position_display.update_position(self.position)
 
-    def motor_command(self, command):
-        """Returns if the command was able to be run."""
-        logging.debug("sending command %s", command)
-        if command is MotorCommand.STOP:
-            self.motor.reset()
-        elif command in (MotorCommand.OUTER_STEP, MotorCommand.INNER_STEP):
-            self.motor.move_step(command.direction.motor_direction)
-            self._update_position(command.direction)
-        elif command is MotorCommand.INNER_STEP:
-            direction = Direction.INNER
-            self.motor.move_step(direction.motor_direction)
-            self._update_position(direction)
-        elif command is MotorCommand.FIND_ORIGIN:
-            logging.warning("FIND_ORIGIN command not implemented")
-            return False
-        else:
-            assert False, "motor command {} not supported".format(command)
-        return True
+    def move_direction(self, printer, status, direction, continue_checker):
+        logging.info("starting sequence move towards %s", direction)
+        while continue_checker(status):
+            if status.edge is direction.extreme_edge:
+                logging.info("stopping sequence move towards %s: at edge", direction)
+                return
+            else:
+                self.motor.move_step(direction.motor_direction)
+                self._update_position(direction)
+
+            # When moving towards the edge, reset our position if we've drifted.
+            status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
+            printer.print_status([status])
+        logging.info("stopping sequence move towards %s: stopped", direction)
 
 
 def setup(platforms):
@@ -231,6 +231,7 @@ class StatusPrinter(object):
 def loop(platforms):
     printer = StatusPrinter()
 
+    auto_mode = False
     while True:
         statuses = [platform.get_status() for platform in platforms]
 
@@ -240,31 +241,17 @@ def loop(platforms):
             platform.output_status(status)
 
             # Enable manual button->motor control.
-            if status.button in (ButtonStatus.OUTER_PRESSED, ButtonStatus.INNER_PRESSED):
-                logging.info("starting command for %s", status.button)
-                while status.button is ButtonStatus.OUTER_PRESSED:
-                    if status.edge is Edge.OUTER:
-                        logging.info("stopping command sequence OUTER_STEP: at outer edge")
-                        break
-                    else:
-                        platform.motor_command(MotorCommand.OUTER_STEP)
-                    # When moving towards the edge, reset our position if we've drifted.
-                    status = platform.get_status(reset_position_on_edge=True)
-                    statuses[i] = status
-                    printer.print_status(statuses)
-                while status.button is ButtonStatus.INNER_PRESSED:
-                    if status.edge is Edge.INNER:
-                        logging.info("stopping command sequence INNER_STEP: at inner edge")
-                        break
-                    else:
-                        platform.motor_command(MotorCommand.INNER_STEP)
-                    status = platform.get_status()
-                    statuses[i] = status
-                    printer.print_status(statuses)
+            if status.button is ButtonStatus.OUTER_PRESSED:
+                continue_checker = lambda s: auto_mode or s.button is ButtonStatus.OUTER_PRESSED
+                platform.move_direction(printer, status, Direction.OUTER, continue_checker)
+            if status.button is ButtonStatus.INNER_PRESSED:
+                continue_checker = lambda s: auto_mode or s.button is ButtonStatus.INNER_PRESSED
+                platform.move_direction(printer, status, Direction.INNER, continue_checker)
             if status.button is ButtonStatus.BOTH_PRESSED:
-                platform.motor_command(MotorCommand.FIND_ORIGIN)
+                # Toggle between manual mode and auto mode.
+                platform.move_direction(printer, status, Direction.OUTER, lambda _: not auto_mode)
             elif status.button is ButtonStatus.NONE_PRESSED:
-                platform.motor_command(MotorCommand.STOP)
+                platform.motor.reset()
 
         # TODO: do something with the luxes.
 

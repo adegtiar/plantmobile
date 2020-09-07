@@ -13,4 +13,10 @@ class ButtonStatus(Enum):
     BOTH_PRESSED = 3
 
 
-Status = namedtuple('Status', ['lux', 'button', 'position', 'edge'])
+#Status = namedtuple('Status', ['lux', 'button', 'position', 'edge'])
+class Status:
+    def __init__(self, lux, button, position, edge):
+        self.lux = lux
+        self.button = button
+        self.position = position
+        self.edge = edge
