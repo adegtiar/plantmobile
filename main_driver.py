@@ -99,9 +99,9 @@ class PlatformDriver(object):
     def cleanup(self):
         """Cleans up and resets any local state and outputs."""
         for output in self.output_indicators:
-            output.reset()
+            output.off()
         if self.motor:
-            self.motor.reset()
+            self.motor.off()
 
     def get_status(self, reset_position_on_edge=False):
         """Reads the current lux, button, position, and edge from sensors and state."""
@@ -251,7 +251,7 @@ def loop(platforms):
                 # Toggle between manual mode and auto mode.
                 platform.move_direction(printer, status, Direction.OUTER, lambda _: not auto_mode)
             elif status.button is ButtonStatus.NONE_PRESSED:
-                platform.motor.reset()
+                platform.motor.off()
 
         # TODO: do something with the luxes.
 

@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from enum import Enum
 
@@ -20,3 +21,17 @@ class Status:
         self.button = button
         self.position = position
         self.edge = edge
+
+
+class Output(ABC):
+    @abstractmethod
+    def setup(self):
+        pass
+
+    @abstractmethod
+    def off(self):
+        pass
+
+    @abstractmethod
+    def update_status(self, status):
+        pass

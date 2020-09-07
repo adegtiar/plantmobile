@@ -28,7 +28,7 @@ class StepperMotor(object):
         for pin in self.pins:
             GPIO.setup(pin, GPIO.OUT)
 
-    def reset(self):
+    def off(self):
         """Reset the motor to stopped."""
         for pin in self.pins:
             GPIO.output(pin, GPIO.LOW)
@@ -76,7 +76,7 @@ def control_loop(motor, blue_button, blue_led, red_button, red_led):
         else:
             red_led.off()
             blue_led.off()
-            motor.reset()
+            motor.off()
 
 
 if __name__ == '__main__':     # Program entrance

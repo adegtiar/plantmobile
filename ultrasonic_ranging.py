@@ -21,7 +21,7 @@ class DistanceSensor(object):
             self._sensor = HCSR04(
                     trigger_pin=self.trig_pin, echo_pin=self.echo_pin, timeout=self.timeout)
 
-    def reset(self):
+    def off(self):
         if self._sensor:
             self._sensor.deinit()
 
@@ -55,4 +55,4 @@ if __name__ == '__main__':     # Program entrance
         loop(sensor)
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         #GPIO.cleanup()         # release GPIO resource
-        sensor.reset()
+        sensor.off()

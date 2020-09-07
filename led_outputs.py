@@ -6,37 +6,29 @@ import time
 
 import tm1637
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from gpiozero import LED
 
-from common import Status
+from common import Output, Status
 
 
-class OutputIndicator(ABC):
+class LedIndicator(Output):
     # The minimum average lux at which it will output anything.
     # Used to keep the light off at night.
     MIN_OUTPUT_LUX = 10
-
-    @abstractmethod
-    def setup(self):
-        pass
-
-    @abstractmethod
-    def reset(self):
-        pass
 
     @abstractmethod
     def _update_status(self, status):
         pass
 
     def update_status(self, status):
-        if status.lux.avg < OutputIndicator.MIN_OUTPUT_LUX:
-            self.reset()
+        if status.lux.avg < LedIndicator.MIN_OUTPUT_LUX:
+            self.off()
         else:
             self._update_status(status)
 
 
-class LedShadowIndicator(OutputIndicator):
+class LedShadowIndicator(LedIndicator):
     DIFF_PERCENT_CUTOFF = 100
 
     def __init__(self, outer_led_pin, inner_led_pin):
@@ -51,7 +43,7 @@ class LedShadowIndicator(OutputIndicator):
         if not self.inner_led:
             self.inner_led = LED(self.inner_led_pin)
 
-    def reset(self):
+    def off(self):
         """Reset the LEDs to off."""
         if self.outer_led:
             self.outer_led.off()
@@ -77,7 +69,7 @@ class LedShadowIndicator(OutputIndicator):
             self.outer_led.off()
 
 
-class DigitDisplay(OutputIndicator):
+class DigitDisplay(LedIndicator):
     """A 7-digit display to show lux readings."""
 
     def __init__(self, clock_pin, data_pin, brightness=2):
@@ -87,7 +79,7 @@ class DigitDisplay(OutputIndicator):
 
     def setup(self):
         self._display.brightness(self.brightness)
-        self.reset()
+        self.off()
 
     def _update_status(self, status):
         """Displays the percent difference of the light reading."""
@@ -101,7 +93,7 @@ class DigitDisplay(OutputIndicator):
     def _get_number_output(self, status):
         pass
 
-    def reset(self):
+    def off(self):
         """Reset the display to an empty state."""
         self._display.show("    ")
 
@@ -119,7 +111,7 @@ class PositionDisplay(DigitDisplay):
         self._update_status(Status(None, None, position, None))
 
 
-class LedBarGraphs(OutputIndicator):
+class LedBarGraphs(LedIndicator):
     """
     Drives one or more Led Bar Graphs controller by shift register 74HC595.
 
@@ -187,7 +179,7 @@ class LedBarGraphs(OutputIndicator):
         GPIO.output(self.latch_pin, GPIO.HIGH)  # Latch the output to the latest register values.
         GPIO.output(self.latch_pin, GPIO.LOW)   # Keep latch pin low.
 
-    def reset(self):
+    def off(self):
         logging.debug("Resetting graphs to empty...")
         self.set_levels(*[0]*self.num_graphs)
 
@@ -213,5 +205,5 @@ if __name__ == '__main__': # Program entrance
                 graphs.set_levels(max_level-i, i)
                 time.sleep(.5)
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
-        graphs.reset()
+        graphs.off()
         GPIO.cleanup()
