@@ -10,7 +10,7 @@ from gpiozero import Button
 
 import motor
 
-from common import ButtonStatus, Status
+from common import ButtonStatus, Output, Status
 from led_outputs import LedBarGraphs, LedShadowIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger
@@ -162,7 +162,7 @@ class PlatformDriver(object):
         if self._position_display:
             self._position_display.update_position(self.position)
 
-    def move_direction(self, printer, status, direction, continue_checker):
+    def move_direction(self, status, direction, continue_checker):
         logging.info("starting sequence move towards %s", direction)
         while continue_checker(status):
             if status.edge is direction.extreme_edge:
@@ -174,7 +174,7 @@ class PlatformDriver(object):
 
             # When moving towards the edge, reset our position if we've drifted.
             status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
-            printer.print_status([status])
+            self.output_status(status)
         logging.info("stopping sequence move towards %s: stopped", direction)
 
 
@@ -202,56 +202,54 @@ def cleanup(platforms):
     #GPIO.cleanup()
 
 
-class StatusPrinter(object):
+class StatusPrinter(Output):
 
     def __init__(self, print_interval=MAIN_LOOP_SLEEP_SECS):
         self.print_interval = print_interval
         self._last_printed_time = float("-inf")
 
-    def print_status(self, statuses):
+    def setup(self):
+        pass
+
+    def off(self):
+        pass
+
+    def update_status(self, status):
         if time.time() - self._last_printed_time < self.print_interval:
             return
 
-        luxes = [status.lux for status in statuses]
-        def tabbed_join(accessor):
-            return "\t".join(str(accessor(lux)) for lux in luxes)
-        print("sensor:\t\t" + tabbed_join(lambda lux: lux.name))
-        print("outer:\t\t" + tabbed_join(lambda lux: lux.outer))
-        print("inner:\t\t" + tabbed_join(lambda lux: lux.inner))
-        print("average:\t" + tabbed_join(lambda lux: lux.avg))
-        print("diff:\t\t" + tabbed_join(lambda lux: lux.diff))
-        print("diff percent:\t" + tabbed_join(lambda lux: "{}%".format(lux.diff_percent)))
-        print("button_status:\t" + "\t".join([status.button.name for status in statuses]))
-        print("position:\t" + "\t".join([str(status.position) for status in statuses]))
-        print("at edge:\t" + "\t".join([str(status.edge) for status in statuses]))
+        print("sensor:\t\t", status.lux.name)
+        print("outer:\t\t", status.lux.outer)
+        print("inner:\t\t", status.lux.inner)
+        print("average:\t", status.lux.avg)
+        print("diff:\t\t", status.lux.diff)
+        print("diff percent:\t {}%".format(status.lux.diff_percent))
+        print("button_status:\t", status.button.name)
+        print("position:\t", status.position)
+        print("at edge:\t", status.edge)
         print()
         self._last_printed_time = time.time()
 
 
-def loop(platforms):
-    printer = StatusPrinter()
-
+def loop(platform):
     auto_mode = False
     while True:
-        statuses = [platform.get_status() for platform in platforms]
+        status = platform.get_status()
+        platform.output_status(status)
 
-        printer.print_status(statuses)
-
-        for i, (status, platform) in enumerate(zip(statuses, platforms)):
-            platform.output_status(status)
-
-            # Enable manual button->motor control.
-            if status.button is ButtonStatus.OUTER_PRESSED:
-                continue_checker = lambda s: auto_mode or s.button is ButtonStatus.OUTER_PRESSED
-                platform.move_direction(printer, status, Direction.OUTER, continue_checker)
-            if status.button is ButtonStatus.INNER_PRESSED:
-                continue_checker = lambda s: auto_mode or s.button is ButtonStatus.INNER_PRESSED
-                platform.move_direction(printer, status, Direction.INNER, continue_checker)
-            if status.button is ButtonStatus.BOTH_PRESSED:
-                # Toggle between manual mode and auto mode.
-                platform.move_direction(printer, status, Direction.OUTER, lambda _: not auto_mode)
-            elif status.button is ButtonStatus.NONE_PRESSED:
-                platform.motor.off()
+        # Enable manual button->motor control.
+        if status.button is ButtonStatus.OUTER_PRESSED:
+            continue_checker = lambda s: auto_mode or s.button is ButtonStatus.OUTER_PRESSED
+            platform.move_direction(status, Direction.OUTER, continue_checker)
+        if status.button is ButtonStatus.INNER_PRESSED:
+            continue_checker = lambda s: auto_mode or s.button is ButtonStatus.INNER_PRESSED
+            platform.move_direction(status, Direction.INNER, continue_checker)
+        if status.button is ButtonStatus.BOTH_PRESSED:
+            # Toggle between manual mode and auto mode.
+            platform.move_direction(status, Direction.OUTER, lambda _: not auto_mode)
+            auto_mode = not auto_mode
+        elif status.button is ButtonStatus.NONE_PRESSED:
+            platform.motor.off()
 
         # TODO: do something with the luxes.
 
@@ -272,6 +270,7 @@ if __name__ == '__main__':
                 LuxDiffDisplay(clock_pin=6, data_pin=13),
                 PositionDisplay(clock_pin=19, data_pin=26),
                 LedShadowIndicator(outer_led_pin=20, inner_led_pin=12),
+                StatusPrinter(),
             ])
 
 
@@ -280,12 +279,12 @@ if __name__ == '__main__':
             light_sensors=LightSensorReader(outer_pin=1, inner_pin=0),
             logger=LightCsvLogger("data/base_sensor_log.csv"))
 
-    working_platforms = setup([STEPPER_CAR, DC_CAR])
+    working_platforms = setup([STEPPER_CAR])
     if not working_platforms:
         print("No working platforms to run. Exiting.")
         sys.exit(1)
     try:
-        loop(working_platforms)
+        loop(working_platforms[0])
     except KeyboardInterrupt:
         print("Stopping...")
     finally:
