@@ -22,6 +22,12 @@ logging.basicConfig(level=logging.INFO)
 MAIN_LOOP_SLEEP_SECS = 0.5
 
 
+class Edge(Enum):
+    NONE = None
+    OUTER = 0
+    INNER = 650
+
+
 class Direction(Enum):
     OUTER = -1
     INNER = +1
@@ -37,12 +43,6 @@ class Direction(Enum):
     @property
     def extreme_edge(self):
         return Edge.OUTER if self is Direction.OUTER else Edge.INNER
-
-
-class Edge(Enum):
-    NONE = None
-    OUTER = 0
-    INNER = 640
 
 
 class PlatformDriver(object):
@@ -240,15 +240,15 @@ def loop(platform):
         # Enable manual button->motor control.
         if status.button is ButtonStatus.OUTER_PRESSED:
             if not manual_mode:
-                platform._direction_leds.blink()
+                platform._direction_leds.blink(times=2)
             platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
         if status.button is ButtonStatus.INNER_PRESSED:
             if not manual_mode:
-                platform._direction_leds.blink()
+                platform._direction_leds.blink(times=2)
             platform.move_direction(Direction.INNER, should_continue=keep_moving_inner)
         if status.button is ButtonStatus.BOTH_PRESSED:
             # Toggle between manual mode and auto mode.
-            platform._direction_leds.blink()
+            platform._direction_leds.blink(times=3)
             manual_mode = not manual_mode
             if not manual_mode:
                 platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
