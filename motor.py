@@ -68,11 +68,11 @@ def control_loop(motor, blue_button, blue_led, red_button, red_led):
         if blue_button.is_pressed:
             blue_led.on()
             red_led.off()
-            motor.move_step(Direction.CCW)
+            motor.move_step(Direction.CW)
         elif red_button.is_pressed:
             red_led.on()
             blue_led.off()
-            motor.move_step(Direction.CW)
+            motor.move_step(Direction.CCW)
         else:
             red_led.off()
             blue_led.off()
@@ -81,7 +81,7 @@ def control_loop(motor, blue_button, blue_led, red_button, red_led):
 
 if __name__ == '__main__':     # Program entrance
     print('Program is starting...')
-    print('BLUE button towards inner, YELLOW towards outer')
+    print('BLUE button towards outer, RED towards inner')
     GPIO.setmode(GPIO.BCM)       # use BCM GPIO Numbering
     MOTOR = StepperMotor(27, 22, 10, 9)    # define pins connected to four phase ABCD of stepper motor
     MOTOR.setup()

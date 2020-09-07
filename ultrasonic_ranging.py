@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import itertools
 import RPi.GPIO as GPIO
 import time
 
@@ -40,11 +41,16 @@ class DistanceSensor(object):
 
 
 def loop(sensor):
-    while(True):
-        #print ("The distance is : %.2f cm" % (sensor.get_distance()))
-        in_range = sensor.is_in_range()
-        print("sensor is {} range".format("in" if in_range else "out of"))
-        time.sleep(.1)
+    out_of_range = False
+    for i in itertools.count():
+        distance = sensor.get_distance()
+        if out_of_range or i % 10 == 0:
+            print("The distance is : %.2f cm" % (distance))
+        out_of_range = distance == float("inf")
+        if out_of_range:
+            out_of_range = True
+            print("sensor is out of range")
+        time.sleep(.01)
 
 
 
