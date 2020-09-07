@@ -164,6 +164,14 @@ class PlatformDriver(object):
 
         logging.info("stopping sequence move towards %s: stopped", direction)
 
+    def blink(self, times=2, pause_secs=0.2):
+        for i in range(times):
+            self._direction_leds.on()
+            time.sleep(pause_secs)
+            self._direction_leds.off()
+            if i != times-1:
+                time.sleep(pause_secs)
+
 
 def setup(platforms):
     GPIO.setmode(GPIO.BCM)        # use BCM GPIO Numbering
@@ -240,15 +248,15 @@ def loop(platform):
         # Enable manual button->motor control.
         if status.button is ButtonStatus.OUTER_PRESSED:
             if not manual_mode:
-                platform._direction_leds.blink(times=2)
+                platform.blink(times=2)
             platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
         if status.button is ButtonStatus.INNER_PRESSED:
             if not manual_mode:
-                platform._direction_leds.blink(times=2)
+                platform.blink(times=2)
             platform.move_direction(Direction.INNER, should_continue=keep_moving_inner)
         if status.button is ButtonStatus.BOTH_PRESSED:
             # Toggle between manual mode and auto mode.
-            platform._direction_leds.blink(times=3)
+            platform.blink(times=3)
             manual_mode = not manual_mode
             if not manual_mode:
                 platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)

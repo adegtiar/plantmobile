@@ -38,10 +38,12 @@ class LedDirectionIndicator(LedIndicator):
         self.inner_led = None
 
     def setup(self):
-        if not self.outer_led:
-            self.outer_led = LED(self.outer_led_pin)
-        if not self.inner_led:
-            self.inner_led = LED(self.inner_led_pin)
+        self.outer_led = LED(self.outer_led_pin)
+        self.inner_led = LED(self.inner_led_pin)
+
+    def on(self):
+        self.outer_led.on()
+        self.inner_led.on()
 
     def off(self):
         """Reset the LEDs to off."""
@@ -51,7 +53,7 @@ class LedDirectionIndicator(LedIndicator):
             self.inner_led.off()
 
     def _output_status(self, status):
-        self.setup()
+        assert self.outer_led and self.inner_led, "Must call setup before outputing"
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
         if abs(lux.diff_percent) >= LedDirectionIndicator.DIFF_PERCENT_CUTOFF:
@@ -67,17 +69,6 @@ class LedDirectionIndicator(LedIndicator):
         else:
             self.inner_led.off()
             self.outer_led.off()
-
-    def blink(self, times=2, pause=0.2):
-        self.setup()
-        for i in range(times):
-            self.outer_led.on()
-            self.inner_led.on()
-            time.sleep(pause)
-            self.outer_led.off()
-            self.inner_led.off()
-            if i != times-1:
-                time.sleep(pause)
 
 
 class DigitDisplay(LedIndicator):
