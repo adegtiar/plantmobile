@@ -63,18 +63,17 @@ class MotorCommand(Enum):
 class PlatformDriver(object):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
-    def __init__(self, name, light_sensors, logger, motor=None, distance_sensor=None,
-            outer_button=None, inner_button=None, output_indicators=()):
+    def __init__(self, name, light_sensors, motor=None, distance_sensor=None,
+            outer_button=None, inner_button=None, outputs=()):
         self.name = name
         self.light_sensors = light_sensors
-        self.logger = logger
         self.motor = motor
         self.distance_sensor = distance_sensor
         self.outer_button = outer_button
         self.inner_button = inner_button
-        self.output_indicators = output_indicators
+        self.outputs = outputs
         self._position_display = None
-        for output in output_indicators:
+        for output in outputs:
             if isinstance(output, PositionDisplay):
                 self._position_display = output
                 break
@@ -89,16 +88,14 @@ class PlatformDriver(object):
         # Set up the light sensors for reading.
         self.light_sensors.name = self.name
         self.light_sensors.setup()
-        # Set up the logger for writing.
-        self.logger.setup()
         if self.motor:
             self.motor.setup()
-        for output in self.output_indicators:
+        for output in self.outputs:
             output.setup()
 
     def cleanup(self):
         """Cleans up and resets any local state and outputs."""
-        for output in self.output_indicators:
+        for output in self.outputs:
             output.off()
         if self.motor:
             self.motor.off()
@@ -113,8 +110,7 @@ class PlatformDriver(object):
 
     def output_status(self, status):
         """Updates the indicators and logs with the given status."""
-        self.logger.log(status.lux)
-        for output in self.output_indicators:
+        for output in self.outputs:
             output.output_status(status)
 
         return status
@@ -260,12 +256,12 @@ if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
-            logger=LightCsvLogger("data/car_sensor_log.csv"),
             motor=motor.StepperMotor(27, 22, 10, 9),
             distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),
-            output_indicators=[
+            outputs=[
+                LightCsvLogger("data/car_sensor_log.csv"),
                 LedBarGraphs(data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
                 LuxDiffDisplay(clock_pin=6, data_pin=13),
                 PositionDisplay(clock_pin=19, data_pin=26),
@@ -277,7 +273,9 @@ if __name__ == '__main__':
     DC_CAR = PlatformDriver(
             name="DC",
             light_sensors=LightSensorReader(outer_pin=1, inner_pin=0),
-            logger=LightCsvLogger("data/base_sensor_log.csv"))
+            outputs=[
+                LightCsvLogger("data/base_sensor_log.csv"),
+            ])
 
     working_platforms = setup([STEPPER_CAR])
     if not working_platforms:

@@ -1,8 +1,10 @@
 import numpy as np
 
+from common import Output
+
 # Logs light data to csv. Writes in minutely intervals.
 # Format of each line is "isotimestamp,outer_lux,inner_lux"
-class LightCsvLogger(object):
+class LightCsvLogger(Output):
 
     def __init__(self, filename):
         self.filename = filename
@@ -14,11 +16,15 @@ class LightCsvLogger(object):
         if self._file is None:
             self._file = open(self.filename, 'a')
 
-    def log(self, lux):
+    def off(self):
+        if self._file is None:
+            self._file.close()
+
+    def output_status(self, status):
         self.setup()
 
         # Timestamp truncated down to the minute
-        timestamp = lux.timestamp.isoformat(timespec='minutes')
+        timestamp = status.lux.timestamp.isoformat(timespec='minutes')
 
         if self._cur_timestamp is None:
             # Initialize current timestamp
@@ -38,5 +44,5 @@ class LightCsvLogger(object):
             self._cur_timestamp_luxes = []
 
         # Add another reading to aggregate within the same minute.
-        self._cur_timestamp_luxes.append(lux)
+        self._cur_timestamp_luxes.append(status.lux)
         return
