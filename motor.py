@@ -5,21 +5,22 @@ import time
 
 from enum import Enum
 from gpiozero import LED, Button
+from RpiMotorLib import RpiMotorLib
 
 from common import Component, Rotation
 
 
-CCW_STEPS = (0, 1, 2, 3) # define power supply order for rotating anticlockwise
-CW_STEPS = (3, 2, 1, 0)  # define power supply order for rotating clockwise
-MIN_PAUSE_SECS = 0.003
+PAUSE_SECS = 0.001
+STEP_TYPE = "half"
+STEPS_PER_MOVE = 7
 
 
 class StepperMotor(Component):
     """The stepper motor moves in discrete steps and so can be used to track rotations."""
 
-    def __init__(self, pin1, pin2, pin3, pin4, pause_secs=MIN_PAUSE_SECS):
+    def __init__(self, pin1, pin2, pin3, pin4):
         self.pins = (pin1, pin2, pin3, pin4)
-        self.pause_secs = max(pause_secs, MIN_PAUSE_SECS)
+        self._motor = RpiMotorLib.BYJMotor("Stepper", "28BYJ")
 
     def setup(self):
         for pin in self.pins:
@@ -35,21 +36,13 @@ class StepperMotor(Component):
         for pin in self.pins:
             GPIO.output(pin, GPIO.HIGH)
 
-    def move_step(self, direction):
+    def move_step(self, rotation):
         """Rotate the motor one period.
 
         Note: this is technically 4 steps for convenience of implementation."""
-        if direction == Rotation.CCW:
-            steps = CCW_STEPS
-        else:
-            steps = CW_STEPS
-
-        for step_idx in steps:
-            for pin_idx, pin in enumerate(self.pins):
-                # When the step index matches the pin index, make it high. Make all others low.
-                GPIO.output(pin, GPIO.HIGH if step_idx == pin_idx else GPIO.LOW)
-            # Pause just enough to max the rotation speed.
-            time.sleep(self.pause_secs)
+        self._motor.motor_run(
+                self.pins, wait=PAUSE_SECS, steps=STEPS_PER_MOVE,
+                ccwise=rotation is Rotation.CCW, steptype=STEP_TYPE)
 
     # continuous rotation function, the parameter steps specifies the rotation cycles, every four steps is a cycle
     def move_steps(self, direction, steps):
@@ -66,15 +59,22 @@ def loop(motor):
 
 
 def control_loop(motor, blue_button, blue_led, red_button, red_led):
+    position = 0
     while True:
-        if blue_button.is_pressed:
+        if red_button.is_pressed and blue_button.is_pressed:
+            print("position is", position)
+            time.sleep(1)
+            position = 0
+        elif blue_button.is_pressed:
             blue_led.on()
             red_led.off()
-            motor.move_step(Rotation.CW)
+            motor.move_step(Rotation.CCW)
+            position -= 1
         elif red_button.is_pressed:
             red_led.on()
             blue_led.off()
-            motor.move_step(Rotation.CCW)
+            motor.move_step(Rotation.CW)
+            position += 1
         else:
             red_led.off()
             blue_led.off()

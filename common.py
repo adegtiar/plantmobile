@@ -10,7 +10,7 @@ LuxReading = namedtuple('SensorReading',
 class Edge(Enum):
     NONE = None
     OUTER = 0
-    INNER = 650
+    INNER = 100
 
 
 class ButtonStatus(Enum):
@@ -35,7 +35,7 @@ class Direction(Enum):
 
     @property
     def motor_direction(self):
-        return Rotation.CW if self is Direction.OUTER else Rotation.CCW
+        return Rotation.CCW if self is Direction.OUTER else Rotation.CW
 
     @property
     def extreme_edge(self):
