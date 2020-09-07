@@ -1,10 +1,13 @@
 import numpy as np
+import time
 
 from common import Output
 
-# Logs light data to csv. Writes in minutely intervals.
-# Format of each line is "isotimestamp,outer_lux,inner_lux"
+
 class LightCsvLogger(Output):
+    """Logs light data to csv in minutely intervals.
+    Format of each line is "isotimestamp,outer_lux,inner_lux".
+    """
 
     def __init__(self, filename):
         self.filename = filename
@@ -19,6 +22,7 @@ class LightCsvLogger(Output):
     def off(self):
         if self._file is None:
             self._file.close()
+            self._file = None
 
     def output_status(self, status):
         self.setup()
@@ -46,3 +50,33 @@ class LightCsvLogger(Output):
         # Add another reading to aggregate within the same minute.
         self._cur_timestamp_luxes.append(status.lux)
         return
+
+
+class StatusPrinter(Output):
+    """Prints statuses to stdout at a configurable interval."""
+
+    def __init__(self, print_interval=0):
+        self.print_interval = print_interval
+        self._last_printed_time = float("-inf")
+
+    def setup(self):
+        pass
+
+    def off(self):
+        pass
+
+    def output_status(self, status):
+        if time.time() - self._last_printed_time < self.print_interval:
+            return
+
+        print("sensor:\t\t", status.lux.name)
+        print("outer:\t\t", status.lux.outer)
+        print("inner:\t\t", status.lux.inner)
+        print("average:\t", status.lux.avg)
+        print("diff:\t\t", status.lux.diff)
+        print("diff percent:\t {}%".format(status.lux.diff_percent))
+        print("button_status:\t", status.button.name)
+        print("position:\t", status.position)
+        print("at edge:\t", status.edge)
+        print()
+        self._last_printed_time = time.time()

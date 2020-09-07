@@ -10,10 +10,11 @@ from gpiozero import Button
 
 import motor
 
-from common import ButtonStatus, Output, Status
+from common import ButtonStatus, Component, Direction, Edge, Output, Status
 from led_outputs import LedBarGraphs, LedDirectionIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
-from logger import LightCsvLogger
+from logger import LightCsvLogger, StatusPrinter
+from motor import StepperMotor
 from ultrasonic_ranging import DistanceSensor
 
 logging.basicConfig(level=logging.INFO)
@@ -22,27 +23,7 @@ logging.basicConfig(level=logging.INFO)
 MAIN_LOOP_SLEEP_SECS = 0.5
 
 
-class Edge(Enum):
-    NONE = None
-    OUTER = 0
-    INNER = 650
-
-
-class Direction(Enum):
-    OUTER = -1
-    INNER = +1
-
-    @property
-    def motor_direction(self):
-        return motor.Direction.CW if self is Direction.OUTER else motor.Direction.CCW
-
-    @property
-    def extreme_edge(self):
-        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
-
-
-
-class PlatformDriver(object):
+class PlatformDriver(Component):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
     def __init__(self, name, light_sensors, motor=None, distance_sensor=None,
@@ -79,7 +60,7 @@ class PlatformDriver(object):
         for output in self.outputs:
             output.setup()
 
-    def cleanup(self):
+    def off(self):
         """Cleans up and resets any local state and outputs."""
         for output in self.outputs:
             output.off()
@@ -191,54 +172,24 @@ def setup(platforms):
 
 def cleanup(platforms):
     for platform in platforms:
-        platform.cleanup()
+        platform.off()
     # GPIO cleanup not needed when also using gpiozero
     #GPIO.cleanup()
 
 
-class StatusPrinter(Output):
-
-    def __init__(self, print_interval=MAIN_LOOP_SLEEP_SECS):
-        self.print_interval = print_interval
-        self._last_printed_time = float("-inf")
-
-    def setup(self):
-        pass
-
-    def off(self):
-        pass
-
-    def output_status(self, status):
-        if time.time() - self._last_printed_time < self.print_interval:
-            return
-
-        print("sensor:\t\t", status.lux.name)
-        print("outer:\t\t", status.lux.outer)
-        print("inner:\t\t", status.lux.inner)
-        print("average:\t", status.lux.avg)
-        print("diff:\t\t", status.lux.diff)
-        print("diff percent:\t {}%".format(status.lux.diff_percent))
-        print("button_status:\t", status.button.name)
-        print("position:\t", status.position)
-        print("at edge:\t", status.edge)
-        print()
-        self._last_printed_time = time.time()
+def keep_moving_checker(manual_mode, manual_hold_button):
+    def keep_moving(status):
+        if manual_mode:
+            # Keep moving while the button is held down.
+            return status.button is manual_hold_button
+        else:
+            # Keep moving unless any button is pressed to cancel it.
+            return status.button is ButtonStatus.NONE_PRESSED
+    return keep_moving
 
 
 def control_loop(platform):
     manual_mode = True
-
-    def keep_moving_outer(status):
-        if manual_mode:
-            return status.button is ButtonStatus.OUTER_PRESSED
-        else:
-            return status.button is ButtonStatus.NONE_PRESSED
-
-    def keep_moving_inner(status):
-        if manual_mode:
-            return status.button is ButtonStatus.INNER_PRESSED
-        else:
-            return status.button is ButtonStatus.NONE_PRESSED
 
     while True:
         status = platform.get_status()
@@ -248,17 +199,20 @@ def control_loop(platform):
         if status.button is ButtonStatus.OUTER_PRESSED:
             if not manual_mode:
                 platform.blink(times=2)
+            keep_moving_outer = keep_moving_checker(manual_mode, ButtonStatus.OUTER_PRESSED)
             platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
         if status.button is ButtonStatus.INNER_PRESSED:
             if not manual_mode:
                 platform.blink(times=2)
+            keep_moving_inner = keep_moving_checker(manual_mode, ButtonStatus.INNER_PRESSED)
             platform.move_direction(Direction.INNER, should_continue=keep_moving_inner)
         if status.button is ButtonStatus.BOTH_PRESSED:
             # Toggle between manual mode and auto mode.
             platform.blink(times=3)
             manual_mode = not manual_mode
             if not manual_mode:
-                platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
+                keep_moving_auto = keep_moving_checker(False, None)
+                platform.move_direction(Direction.OUTER, should_continue=keep_moving_auto)
         elif status.button is ButtonStatus.NONE_PRESSED:
             platform.motor.off()
 
@@ -271,7 +225,7 @@ if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
-            motor=motor.StepperMotor(27, 22, 10, 9),
+            motor=StepperMotor(27, 22, 10, 9),
             distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),
@@ -281,7 +235,7 @@ if __name__ == '__main__':
                 LedBarGraphs(data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
                 LuxDiffDisplay(clock_pin=6, data_pin=13),
                 PositionDisplay(clock_pin=19, data_pin=26),
-                StatusPrinter(),
+                StatusPrinter(print_interval=MAIN_LOOP_SLEEP_SECS),
             ])
 
 

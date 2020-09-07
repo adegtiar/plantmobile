@@ -9,10 +9,12 @@ import logging
 from datetime import datetime
 from numpy import mean
 
-from common import LuxReading
+from common import Input, LuxReading
 
-# Read lux data from a pair of sensors connected to multiplexer.
-class LightSensorReader(object):
+
+class LightSensorReader(Input):
+    """Read lux data from an inner and outer sensor."""
+
     # This is the i2c multiplexer used for the light sensors (to deal with address conflict).
     _mux = None
 
@@ -32,6 +34,10 @@ class LightSensorReader(object):
                 self.name, self.outer_pin, self.inner_pin))
             self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.outer_pin])
             self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.inner_pin])
+
+    def off(self):
+        # TODO: de-init tsl2561 or just handled by main?
+        pass
 
     @classmethod
     def get_mux(cls):

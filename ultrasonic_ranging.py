@@ -8,8 +8,10 @@ import time
 from adafruit_hcsr04 import HCSR04
 import board
 
+from common import Component
 
-class DistanceSensor(object):
+
+class DistanceSensor(Component):
 
     def __init__(self, trig_pin, echo_pin, threshold_cm=10, timeout=0.05):
         self.trig_pin = board.pin.Pin(trig_pin)

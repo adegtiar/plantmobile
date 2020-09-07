@@ -6,10 +6,7 @@ import time
 from enum import Enum
 from gpiozero import LED, Button
 
-
-class Direction(Enum):
-    CW = 0
-    CCW = 1
+from common import Component, Rotation
 
 
 CCW_STEPS = (0, 1, 2, 3) # define power supply order for rotating anticlockwise
@@ -17,7 +14,7 @@ CW_STEPS = (3, 2, 1, 0)  # define power supply order for rotating clockwise
 MIN_PAUSE_SECS = 0.003
 
 
-class StepperMotor(object):
+class StepperMotor(Component):
     """The stepper motor moves in discrete steps and so can be used to track rotations."""
 
     def __init__(self, pin1, pin2, pin3, pin4, pause_secs=MIN_PAUSE_SECS):
@@ -42,7 +39,7 @@ class StepperMotor(object):
         """Rotate the motor one period.
 
         Note: this is technically 4 steps for convenience of implementation."""
-        if direction == Direction.CCW:
+        if direction == Rotation.CCW:
             steps = CCW_STEPS
         else:
             steps = CW_STEPS
@@ -73,11 +70,11 @@ def control_loop(motor, blue_button, blue_led, red_button, red_led):
         if blue_button.is_pressed:
             blue_led.on()
             red_led.off()
-            motor.move_step(Direction.CW)
+            motor.move_step(Rotation.CW)
         elif red_button.is_pressed:
             red_led.on()
             blue_led.off()
-            motor.move_step(Direction.CCW)
+            motor.move_step(Rotation.CCW)
         else:
             red_led.off()
             blue_led.off()
