@@ -40,9 +40,6 @@ class Direction(Enum):
     def extreme_edge(self):
         return Edge.OUTER if self is Direction.OUTER else Edge.INNER
 
-    @property
-    def extreme_edge(self):
-        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
 
 
 class PlatformDriver(object):
@@ -228,7 +225,7 @@ class StatusPrinter(Output):
         self._last_printed_time = time.time()
 
 
-def loop(platform):
+def control_loop(platform):
     manual_mode = True
 
     def keep_moving_outer(status):
@@ -300,7 +297,7 @@ if __name__ == '__main__':
         print("No working platforms to run. Exiting.")
         sys.exit(1)
     try:
-        loop(working_platforms[0])
+        control_loop(working_platforms[0])
     except KeyboardInterrupt:
         print("Stopping...")
     finally:
