@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 MAIN_LOOP_SLEEP_SECS = 0.5
+STEPS_PER_MOVE = 7
 
 
 class PlatformDriver(Component):
@@ -36,6 +37,7 @@ class PlatformDriver(Component):
         self.inner_button = inner_button
         self.outputs = list(outputs)
         self._position_display = None
+
         self._direction_leds = direction_leds
         if direction_leds:
             self.outputs.append(direction_leds)
@@ -55,6 +57,8 @@ class PlatformDriver(Component):
         # Set up the light sensors for reading.
         self.light_sensors.name = self.name
         self.light_sensors.setup()
+        if self.distance_sensor:
+            self.distance_sensor.setup()
         if self.motor:
             self.motor.setup()
         for output in self.outputs:
@@ -145,7 +149,7 @@ class PlatformDriver(Component):
                 logging.warning(stop_fmt, "went {} steps without reaching edge".format(steps))
                 return
             else:
-                self.motor.move_step(direction.motor_rotation)
+                self.motor.move_steps(direction.motor_rotation, STEPS_PER_MOVE)
                 self._update_position(direction)
         assert False, "should terminate within the loop"
 

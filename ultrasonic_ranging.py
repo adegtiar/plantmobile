@@ -4,6 +4,7 @@ import itertools
 import logging
 import RPi.GPIO as GPIO
 import time
+from typing import NoReturn
 
 from adafruit_hcsr04 import HCSR04  # type: ignore
 import board
@@ -13,7 +14,7 @@ from common import Component
 
 class DistanceSensor(Component):
 
-    def __init__(self, trig_pin, echo_pin, threshold_cm=10, timeout=0.05):
+    def __init__(self, trig_pin: int, echo_pin: int, threshold_cm: int=10, timeout: float=0.05) -> None:
         self.trig_pin = board.pin.Pin(trig_pin)
         self.echo_pin = board.pin.Pin(echo_pin)
         self.threshold_cm = threshold_cm
@@ -21,20 +22,21 @@ class DistanceSensor(Component):
         self._sensor = None
         self._prev_distance = None
 
-    def setup(self):
+    def setup(self) -> None:
         if self._sensor is None:
             self._sensor = HCSR04(
                     trigger_pin=self.trig_pin, echo_pin=self.echo_pin, timeout=self.timeout)
 
-    def off(self):
+    def off(self) -> None:
         if self._sensor:
             self._sensor.deinit()
 
-    def get_distance(self):
+    def read(self) -> float:
         """Gets the distance in cm via the sensor.
 
         Returns inf when no response is heard within timeout."""
-        self.setup()
+        assert self._sensor, "Must call setup before reading"
+
         try:
             self._prev_distance = self._sensor.distance
         except RuntimeError:
@@ -43,18 +45,18 @@ class DistanceSensor(Component):
         if self._prev_distance is None:
             logging.warn("Initializing first value to inf and retrying")
             self._prev_distance = float("inf")
-            return self.get_distance()
+            return self.read()
         else:
             return self._prev_distance
 
-    def is_in_range(self):
-        return self.get_distance() < self.threshold_cm
+    def is_in_range(self) -> bool:
+        return self.read() < self.threshold_cm
 
 
-def loop(sensor):
+def loop(sensor: DistanceSensor) -> NoReturn:
     out_of_range = False
     for i in itertools.count():
-        distance = sensor.get_distance()
+        distance = sensor.read()
         if out_of_range or i % 1 == 0:
             print("The distance is : %.2f cm" % (distance))
         out_of_range = distance == float("inf")
@@ -62,6 +64,7 @@ def loop(sensor):
             out_of_range = True
             print("sensor is out of range")
         time.sleep(.1)
+    assert False, "Not reached"
 
 
 if __name__ == '__main__':     # Program entrance
