@@ -1,2 +1,4 @@
 data
 session.vim
+.mypy_cache
+monkeytype.sqlite3
