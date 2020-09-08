@@ -10,7 +10,7 @@ from gpiozero import Button
 
 import motor
 
-from common import ButtonStatus, Component, Direction, Region, Output, Status
+from common import ButtonPress, Component, Direction, Region, Output, Status
 from led_outputs import LedBarGraphs, LedDirectionIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger, StatusPrinter
@@ -71,7 +71,7 @@ class PlatformDriver(Component):
         """Reads the current lux, button, position, and edge from sensors and state."""
         return Status(
                 lux=self.light_sensors.read(),
-                button=self.get_button_status(),
+                button=self.get_button_pressed(),
                 position=self.position,
                 region=self.get_region(reset_position_on_edge))
 
@@ -82,20 +82,17 @@ class PlatformDriver(Component):
 
         return status
 
-    def get_button_status(self):
-        OUTER_PRESSED = self.outer_button.is_pressed if self.outer_button else False
-        INNER_PRESSED = self.inner_button.is_pressed if self.inner_button else False
-
-        if OUTER_PRESSED and INNER_PRESSED:
-            return ButtonStatus.BOTH_PRESSED
-        elif OUTER_PRESSED:
-            return ButtonStatus.OUTER_PRESSED
-        elif INNER_PRESSED:
-            return ButtonStatus.INNER_PRESSED
-        else:
-            return ButtonStatus.NONE_PRESSED
+    def get_button_pressed(self):
+        """Gets the current button press status."""
+        return ButtonPress.from_buttons(
+                outer_pressed=self.outer_button and self.outer_button.is_pressed,
+                inner_pressed=self.inner_button and self.inner_button.is_pressed)
 
     def get_region(self, reset_position_on_edge=False):
+        """Get the region of the table in which the platform is located.
+
+        Note: upon intialization when the position is unknown, we might report
+        being in MID while we're actually at the inner edge."""
         if self.position == Region.INNER_EDGE.value:
             return Region.INNER_EDGE
 
@@ -127,20 +124,30 @@ class PlatformDriver(Component):
 
     def move_direction(self, direction, should_continue):
         logging.info("starting sequence move towards %s", direction)
-        status = self.get_status()
-        while should_continue(status):
-            if status.region is direction.extreme_edge:
-                logging.info("stopping sequence move towards %s: at edge", direction)
-                return
-            else:
-                self.motor.move_step(direction.motor_rotation)
-                self._update_position(direction)
+        stop_fmt = "stopping sequence move towards {}: %s (%d steps)".format(direction)
 
+        # Move at most the region size, with a small error buffer to bias towards the outer edge.
+        max_distance = int(Region.size() * 1.1)
+
+        for steps_travelled in range(max_distance+1):
             # When moving towards the edge, reset our position if we've drifted.
             status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
             self.output_status(status)
 
-        logging.info("stopping sequence move towards %s: stopped", direction)
+            if not should_continue(status):
+                logging.info(stop_fmt, "stopped", steps_travelled)
+                return
+            elif status.region is direction.extreme_edge:
+                logging.info(stop_fmt, "at edge", steps_travelled)
+                return
+            elif steps_travelled == max_distance:
+                # Terminate with an explicit check to run edge check first.
+                logging.warning(stop_fmt, "went {} steps without reaching edge".format(steps))
+                return
+            else:
+                self.motor.move_step(direction.motor_rotation)
+                self._update_position(direction)
+        assert False, "should terminate within the loop"
 
     def blink(self, times=2, pause_secs=0.2):
         for i in range(times):
@@ -184,7 +191,7 @@ def keep_moving_checker(manual_mode, manual_hold_button):
             return status.button is manual_hold_button
         else:
             # Keep moving unless any button is pressed to cancel it.
-            return status.button is ButtonStatus.NONE_PRESSED
+            return status.button is ButtonPress.NONE
     return keep_moving
 
 
@@ -196,24 +203,24 @@ def control_loop(platform):
         platform.output_status(status)
 
         # Enable manual button->motor control.
-        if status.button is ButtonStatus.OUTER_PRESSED:
+        if status.button is ButtonPress.OUTER:
             if not manual_mode:
                 platform.blink(times=2)
-            keep_moving_outer = keep_moving_checker(manual_mode, ButtonStatus.OUTER_PRESSED)
+            keep_moving_outer = keep_moving_checker(manual_mode, ButtonPress.OUTER)
             platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
-        if status.button is ButtonStatus.INNER_PRESSED:
+        if status.button is ButtonPress.INNER:
             if not manual_mode:
                 platform.blink(times=2)
-            keep_moving_inner = keep_moving_checker(manual_mode, ButtonStatus.INNER_PRESSED)
+            keep_moving_inner = keep_moving_checker(manual_mode, ButtonPress.INNER)
             platform.move_direction(Direction.INNER, should_continue=keep_moving_inner)
-        if status.button is ButtonStatus.BOTH_PRESSED:
+        if status.button is ButtonPress.BOTH:
             # Toggle between manual mode and auto mode.
             platform.blink(times=3)
             manual_mode = not manual_mode
             if not manual_mode:
                 keep_moving_auto = keep_moving_checker(False, None)
                 platform.move_direction(Direction.OUTER, should_continue=keep_moving_auto)
-        elif status.button is ButtonStatus.NONE_PRESSED:
+        elif status.button is ButtonPress.NONE:
             platform.motor.off()
 
         # TODO: do something with the luxes.

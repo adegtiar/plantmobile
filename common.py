@@ -14,13 +14,19 @@ class Region(Enum):
     MID = None
     INNER_EDGE = 100
 
+    @classmethod
+    def size(cls) -> int:
+        return abs(Region.INNER_EDGE.value - Region.OUTER_EDGE.value)
+
 
 class Rotation(Enum):
+    """The spin direction of the motor."""
     CW = 0
     CCW = 1
 
 
 class Direction(Enum):
+    """The relative direction of travel."""
     OUTER = -1
     INNER = +1
 
@@ -33,26 +39,37 @@ class Direction(Enum):
         return Region.OUTER_EDGE if self is Direction.OUTER else Region.INNER_EDGE
 
 
-class ButtonStatus(Enum):
-    NONE_PRESSED = 0
-    OUTER_PRESSED = 1
-    INNER_PRESSED = 2
-    BOTH_PRESSED = 3
+class ButtonPress(Enum):
+    NONE = 0
+    OUTER = 1
+    INNER = 2
+    BOTH = 3
 
     @property
     def corresponding_direction(self) -> Union[Direction, None]:
-        if self is ButtonStatus.OUTER_PRESSED:
+        if self is ButtonPress.OUTER:
             return Direction.OUTER
-        elif self is ButtonStatus.INNER_PRESSED:
+        elif self is ButtonPress.INNER:
             return Direction.INNER
         else:
             return None
+
+    @classmethod
+    def from_buttons(cls, outer_pressed: bool, inner_pressed: bool) -> 'ButtonPress':
+        if outer_pressed and inner_pressed:
+            return ButtonPress.BOTH
+        elif outer_pressed:
+            return ButtonPress.OUTER
+        elif inner_pressed:
+            return ButtonPress.INNER
+        else:
+            return ButtonPress.NONE
 
 
 class Status:
     def __init__(self,
             lux: Optional[LuxReading],
-            button: Optional[ButtonStatus],
+            button: Optional[ButtonPress],
             position: Optional[int],
             region: Optional[Region]) -> None:
         self.lux = lux
