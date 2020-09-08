@@ -3,6 +3,7 @@
 import logging
 import RPi.GPIO as GPIO
 import time
+from typing import Optional
 
 import tm1637   # type: ignore
 
@@ -88,22 +89,21 @@ class DigitDisplay(LedIndicator):
 
     def _output_status(self, status: Status) -> None:
         """Displays the percent difference of the light reading."""
-        output = self._get_number_output(status)
-        if output is not None:
-            self._display.number(output)
-        else:
-            self._display.show("    ")
+        self.output_number(self._get_number_output(status))
 
     @abstractmethod
-    def _get_number_output(self, status: Status) -> int:
+    def _get_number_output(self, status: Status) -> Optional[int]:
         pass
 
     def off(self) -> None:
         """Reset the display to an empty state."""
         self._display.show("    ")
 
-    def output_number(self, num: int) -> None:
-        self._display.number(num)
+    def output_number(self, num: Optional[int]) -> None:
+        if num is not None:
+            self._display.number(num)
+        else:
+            self._display.show("    ")
 
 
 class LuxDiffDisplay(DigitDisplay):
@@ -112,7 +112,7 @@ class LuxDiffDisplay(DigitDisplay):
 
 
 class PositionDisplay(DigitDisplay):
-    def _get_number_output(self, status: Status) -> int:
+    def _get_number_output(self, status: Status) -> Optional[int]:
         return status.position
 
 

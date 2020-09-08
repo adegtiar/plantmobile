@@ -4,6 +4,7 @@ import logging
 import RPi.GPIO as GPIO
 import sys
 import time
+from typing import Callable, Iterable, List, NoReturn, Optional, Union
 
 from enum import Enum
 from gpiozero import Button
@@ -27,8 +28,16 @@ STEPS_PER_MOVE = 7
 class PlatformDriver(Component):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
-    def __init__(self, name, light_sensors, motor=None, distance_sensor=None,
-            direction_leds=None, outer_button=None, inner_button=None, outputs=()):
+    def __init__(self, 
+            name: str,
+            light_sensors: LightSensorReader,
+            motor: Optional[StepperMotor] = None,
+            distance_sensor: Optional[DistanceSensor] = None,
+            direction_leds: Optional[LedDirectionIndicator] = None,
+            outer_button: Optional[Button] = None,
+            inner_button: Optional[Button] = None,
+            outputs: Iterable[Output] = (),
+        ) -> None:
         self.name = name
         self.light_sensors = light_sensors
         self.motor = motor
@@ -46,9 +55,9 @@ class PlatformDriver(Component):
             if isinstance(output, PositionDisplay):
                 self._position_display = output
                 break
-        self.position = None
+        self.position: Optional[int] = None
 
-    def setup(self):
+    def setup(self) -> None:
         """Initialize all components of the platform.
 
         This sets up connections and initializes default state. Any obvious failures in the hardware
@@ -64,14 +73,14 @@ class PlatformDriver(Component):
         for output in self.outputs:
             output.setup()
 
-    def off(self):
+    def off(self) -> None:
         """Cleans up and resets any local state and outputs."""
         for output in self.outputs:
             output.off()
         if self.motor:
             self.motor.off()
 
-    def get_status(self, reset_position_on_edge=False):
+    def get_status(self, reset_position_on_edge: bool = False) -> Status:
         """Reads the current lux, button, position, and edge from sensors and state."""
         return Status(
                 lux=self.light_sensors.read(),
@@ -79,20 +88,18 @@ class PlatformDriver(Component):
                 position=self.position,
                 region=self.get_region(reset_position_on_edge))
 
-    def output_status(self, status):
+    def output_status(self, status: Status) -> None:
         """Updates the indicators and logs with the given status."""
         for output in self.outputs:
             output.output_status(status)
 
-        return status
-
-    def get_button_pressed(self):
+    def get_button_pressed(self) -> ButtonPress:
         """Gets the current button press status."""
         return ButtonPress.from_buttons(
-                outer_pressed=self.outer_button and self.outer_button.is_pressed,
-                inner_pressed=self.inner_button and self.inner_button.is_pressed)
+                outer_pressed=bool(self.outer_button and self.outer_button.is_pressed),
+                inner_pressed=bool(self.inner_button and self.inner_button.is_pressed))
 
-    def get_region(self, reset_position_on_edge=False):
+    def get_region(self, reset_position_on_edge: bool = False) -> Region:
         """Get the region of the table in which the platform is located.
 
         Note: upon intialization when the position is unknown, we might report
@@ -100,13 +107,14 @@ class PlatformDriver(Component):
         if self.position == Region.INNER_EDGE.value:
             return Region.INNER_EDGE
 
+        assert self.distance_sensor, "distance sensor must be configured"
         at_outer_edge = not self.distance_sensor.is_in_range()
         if at_outer_edge and (self.position is None or reset_position_on_edge):
             logging.info("At outer edge. Setting position to zero.")
             self._update_position(Region.OUTER_EDGE)
         return Region.OUTER_EDGE if at_outer_edge else Region.MID
 
-    def _update_position(self, increment):
+    def _update_position(self, increment: Union[Region, Direction]) -> None:
         if increment == Region.OUTER_EDGE:
             # Initialize the position to 0 at the edge.
             if self.position is None:
@@ -126,25 +134,28 @@ class PlatformDriver(Component):
         if self._position_display:
             self._position_display.output_number(self.position)
 
-    def move_direction(self, direction, stop_requested):
+    def move_direction(self,
+            direction: Direction, stop_requested: Callable[[Status], bool]) -> None:
+        assert self.motor, "motor must be configured"
+
         logging.info("starting sequence move towards %s", direction)
         stop_fmt = "stopping sequence move towards {}: %s (%d steps)".format(direction)
 
         # Move at most the region size, with a small error buffer to bias towards the outer edge.
         max_distance = int(Region.size() * 1.1)
 
-        for steps_travelled in range(max_distance+1):
+        for steps in range(max_distance+1):
             # When moving towards the edge, reset our position if we've drifted.
             status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
             self.output_status(status)
 
             if stop_requested(status):
-                logging.info(stop_fmt, "stopped", steps_travelled)
+                logging.info(stop_fmt, "stopped", steps)
                 return
             elif status.region is direction.extreme_edge:
-                logging.info(stop_fmt, "at edge", steps_travelled)
+                logging.info(stop_fmt, "at edge", steps)
                 return
-            elif steps_travelled == max_distance:
+            elif steps == max_distance:
                 # Terminate with an explicit check to run edge check first.
                 logging.warning(stop_fmt, "went {} steps without reaching edge".format(steps))
                 return
@@ -153,26 +164,37 @@ class PlatformDriver(Component):
                 self._update_position(direction)
         assert False, "should terminate within the loop"
 
-    def blink(self, times=2, pause_secs=0.2):
+    def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
+        assert self._direction_leds, "LEDs must be configured"
+
         for i in range(times):
+            # Turn LEDs on
             self._direction_leds.on()
-            self.motor.all_on()
+            if self.motor:
+                self.motor.all_on()
+
             time.sleep(pause_secs)
+
+            # Turn LEDs off
             self._direction_leds.off()
-            self.motor.off()
+            if self.motor:
+                self.motor.off()
+
             if i != times-1:
                 time.sleep(pause_secs)
 
 
-def setup(platforms):
-    GPIO.setmode(GPIO.BCM)        # use BCM GPIO Numbering
+def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
+    # Use BCM GPIO numbering.
+    GPIO.setmode(GPIO.BCM)        
 
     # Initialize all platforms and return the ones that are failure-free.
     working_platforms = []
     for platform in platforms:
         try:
             platform.setup()
-        except ValueError as e: # This might happen if the car is disconnected
+        except ValueError as e: 
+            # This might happen if the car is disconnected.
             logging.error(e)
             logging.warning(
                     "Failed to setup {} platform: may be disconnected.".format(platform.name))
@@ -181,15 +203,15 @@ def setup(platforms):
     return working_platforms
 
 
-def cleanup(platforms):
+def cleanup(platforms: Iterable[PlatformDriver]) -> None:
     for platform in platforms:
         platform.off()
     # GPIO cleanup not needed when also using gpiozero
     #GPIO.cleanup()
 
 
-def stop_requester(manual_mode, manual_hold_button):
-    def stop_requested(status):
+def stop_requester(manual_mode: bool, manual_hold_button: ButtonPress) -> Callable[[Status], bool]:
+    def stop_requested(status: Status) -> bool:
         if manual_mode:
             # Keep moving while the button is held down.
             return not (status.button is manual_hold_button)
@@ -199,7 +221,7 @@ def stop_requester(manual_mode, manual_hold_button):
     return stop_requested
 
 
-def control_loop(platform):
+def control_loop(platform: PlatformDriver) -> NoReturn:
     manual_mode = True
 
     while True:
@@ -207,22 +229,29 @@ def control_loop(platform):
         platform.output_status(status)
 
         # Enable manual button->motor control.
-        if status.button is ButtonPress.OUTER:
-            if not manual_mode:
-                platform.blink(times=2)
-            platform.move_direction(Direction.OUTER, stop_requester(manual_mode, ButtonPress.OUTER))
-        if status.button is ButtonPress.INNER:
-            if not manual_mode:
-                platform.blink(times=2)
-            platform.move_direction(Direction.INNER, stop_requester(manual_mode, ButtonPress.INNER))
-        if status.button is ButtonPress.BOTH:
-            # Toggle between manual mode and auto mode.
-            platform.blink(times=3)
-            manual_mode = not manual_mode
-            if not manual_mode:
-                platform.move_direction(Direction.OUTER, stop_requester(False, None))
-        elif status.button is ButtonPress.NONE:
-            platform.motor.off()
+        if platform.motor:
+            if status.button is ButtonPress.OUTER:
+                if not manual_mode:
+                    platform.blink(times=2)
+                platform.move_direction(
+                        Direction.OUTER,
+                        stop_requester(manual_mode, ButtonPress.OUTER))
+            if status.button is ButtonPress.INNER:
+                if not manual_mode:
+                    platform.blink(times=2)
+                platform.move_direction(
+                        Direction.INNER,
+                        stop_requester(manual_mode, ButtonPress.INNER))
+            if status.button is ButtonPress.BOTH:
+                # Toggle between manual mode and auto mode.
+                platform.blink(times=3)
+                manual_mode = not manual_mode
+                if not manual_mode:
+                    platform.move_direction(
+                            Direction.OUTER,
+                            stop_requested=lambda s: not status.button is ButtonPress.NONE)
+            elif status.button is ButtonPress.NONE:
+                platform.motor.off()
 
         # TODO: do something with the luxes.
 

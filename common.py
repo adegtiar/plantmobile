@@ -68,8 +68,8 @@ class ButtonPress(Enum):
             return ButtonPress.NONE
 
 
-Status = NamedTuple('Status',
-        [('lux', LuxReading), ('button', ButtonPress), ('position', int), ('region', Region)])
+Status = NamedTuple('Status', [
+    ('lux', LuxReading), ('button', ButtonPress), ('position', Optional[int]), ('region', Region)])
 
 
 class Component(ABC):
