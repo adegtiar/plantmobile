@@ -141,7 +141,7 @@ class LedBarGraphs(LedIndicator):
 
     def setup(self) -> None:
         logging.info(
-                "initializing {} graphs with {} leds, min {}, max {}, and {} levels per led".format(
+                "initializing {} graphs with {} leds, min {}, max {}, and {:.2f} levels per led".format(
                     self.num_graphs, self.num_leds, self.min_level,
                     self.max_level, self.levels_per_led))
 

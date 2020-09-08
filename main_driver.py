@@ -236,13 +236,13 @@ def control_loop(platform: PlatformDriver) -> NoReturn:
                 platform.move_direction(
                         Direction.OUTER,
                         stop_requester(manual_mode, ButtonPress.OUTER))
-            if status.button is ButtonPress.INNER:
+            elif status.button is ButtonPress.INNER:
                 if not manual_mode:
                     platform.blink(times=2)
                 platform.move_direction(
                         Direction.INNER,
                         stop_requester(manual_mode, ButtonPress.INNER))
-            if status.button is ButtonPress.BOTH:
+            elif status.button is ButtonPress.BOTH:
                 # Toggle between manual mode and auto mode.
                 platform.blink(times=3)
                 manual_mode = not manual_mode
@@ -252,6 +252,8 @@ def control_loop(platform: PlatformDriver) -> NoReturn:
                             stop_requested=lambda s: not status.button is ButtonPress.NONE)
             elif status.button is ButtonPress.NONE:
                 platform.motor.off()
+            else:
+                assert False, "unknown button press {}".format(status.button)
 
         # TODO: do something with the luxes.
 
