@@ -18,10 +18,10 @@ class LedIndicator(Output):
     MIN_OUTPUT_LUX = 10
 
     @abstractmethod
-    def _output_status(self, status):
+    def _output_status(self, status: Status) -> None:
         pass
 
-    def output_status(self, status):
+    def output_status(self, status: Status) -> None:
         if status.lux.avg < LedIndicator.MIN_OUTPUT_LUX:
             self.off()
         else:
@@ -31,28 +31,28 @@ class LedIndicator(Output):
 class LedDirectionIndicator(LedIndicator):
     DIFF_PERCENT_CUTOFF = 100
 
-    def __init__(self, outer_led_pin, inner_led_pin):
+    def __init__(self, outer_led_pin: int, inner_led_pin: int) -> None:
         self.outer_led_pin = outer_led_pin
         self.inner_led_pin = inner_led_pin
         self.outer_led = None
         self.inner_led = None
 
-    def setup(self):
+    def setup(self) -> None:
         self.outer_led = LED(self.outer_led_pin)
         self.inner_led = LED(self.inner_led_pin)
 
-    def on(self):
+    def on(self) -> None:
         self.outer_led.on()
         self.inner_led.on()
 
-    def off(self):
+    def off(self) -> None:
         """Reset the LEDs to off."""
         if self.outer_led:
             self.outer_led.off()
         if self.inner_led:
             self.inner_led.off()
 
-    def _output_status(self, status):
+    def _output_status(self, status: Status) -> None:
         assert self.outer_led and self.inner_led, "Must call setup before outputing"
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
@@ -79,11 +79,11 @@ class DigitDisplay(LedIndicator):
         # The brightness of the display, from 0-7
         self.brightness=brightness
 
-    def setup(self):
+    def setup(self) -> None:
         self._display.brightness(self.brightness)
         self.off()
 
-    def _output_status(self, status):
+    def _output_status(self, status: Status) -> None:
         """Displays the percent difference of the light reading."""
         output = self._get_number_output(status)
         if output is not None:
@@ -92,10 +92,10 @@ class DigitDisplay(LedIndicator):
             self._display.show("    ")
 
     @abstractmethod
-    def _get_number_output(self, status):
+    def _get_number_output(self, status: Status) -> int:
         pass
 
-    def off(self):
+    def off(self) -> None:
         """Reset the display to an empty state."""
         self._display.show("    ")
 
@@ -104,12 +104,12 @@ class DigitDisplay(LedIndicator):
 
 
 class LuxDiffDisplay(DigitDisplay):
-    def _get_number_output(self, status):
+    def _get_number_output(self, status: Status) -> int:
         return status.lux.diff_percent
 
 
 class PositionDisplay(DigitDisplay):
-    def _get_number_output(self, status):
+    def _get_number_output(self, status: Status) -> int:
         return status.position
 
 

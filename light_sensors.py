@@ -8,6 +8,7 @@ from datetime import datetime
 from numpy import mean
 
 from common import Input, LuxReading
+from adafruit_tca9548a import TCA9548A
 
 
 class LightSensorReader(Input):
@@ -16,14 +17,14 @@ class LightSensorReader(Input):
     # This is the i2c multiplexer used for the light sensors (to deal with address conflict).
     _mux = None
 
-    def __init__(self, outer_pin, inner_pin, name="<default>"):
+    def __init__(self, outer_pin: int, inner_pin: int, name: str="<default>") -> None:
         self.name = name
         self.outer_pin = outer_pin
         self.inner_pin = inner_pin
         self._outer_tsl = None
         self._inner_tsl = None
 
-    def setup(self):
+    def setup(self) -> None:
         # For each sensor, create it using the TCA9548A channel acting as an I2C object.
         # May throw a ValueError if it's not connected.
         if self._outer_tsl is None:
@@ -38,7 +39,7 @@ class LightSensorReader(Input):
         pass
 
     @classmethod
-    def get_mux(cls):
+    def get_mux(cls) -> TCA9548A:
         if cls._mux is None:
             logging.info("Initializing i2c mux TCA9548A on SCL and SDA pins")
             # Create I2C bus as normal.
