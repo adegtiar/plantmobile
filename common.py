@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Optional, NamedTuple, Union
 
 # A reading of light sensor data.
-LuxReading = namedtuple('LuxReading',
-        ['outer', 'inner', 'avg', 'diff', 'diff_percent', 'timestamp', 'name'])
+LuxReading = NamedTuple('LuxReading', [
+    ('outer', int), ('inner', int), ('avg', int), ('diff', int),
+    ('diff_percent', int), ('timestamp', datetime), ('name', str),
+])
 
 
 class Region(Enum):
@@ -66,16 +68,8 @@ class ButtonPress(Enum):
             return ButtonPress.NONE
 
 
-class Status:
-    def __init__(self,
-            lux: Optional[LuxReading],
-            button: Optional[ButtonPress],
-            position: Optional[int],
-            region: Optional[Region]) -> None:
-        self.lux = lux
-        self.button = button
-        self.position = position
-        self.region = region
+Status = NamedTuple('Status',
+        [('lux', LuxReading), ('button', ButtonPress), ('position', int), ('region', Region)])
 
 
 class Component(ABC):

@@ -1,7 +1,8 @@
 import numpy as np
 import time
+from typing import IO, List, Optional
 
-from common import Output
+from common import LuxReading, Output, Status
 
 
 class LightCsvLogger(Output):
@@ -9,23 +10,23 @@ class LightCsvLogger(Output):
     Format of each line is "isotimestamp,outer_lux,inner_lux".
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename: str) -> None:
         self.filename = filename
-        self._file = None
-        self._cur_timestamp = None
-        self._cur_timestamp_luxes = []
+        self._file: Optional[IO] = None
+        self._cur_timestamp: Optional[str] = None
+        self._cur_timestamp_luxes: List[LuxReading] = []
 
-    def setup(self):
+    def setup(self) -> None:
         if self._file is None:
             self._file = open(self.filename, 'a')
 
-    def off(self):
-        if self._file is None:
+    def off(self) -> None:
+        if self._file is not None:
             self._file.close()
             self._file = None
 
-    def output_status(self, status):
-        self.setup()
+    def output_status(self, status: Status) -> None:
+        assert self._file is not None, "must call setup() to initialize"
 
         # Timestamp truncated down to the minute
         timestamp = status.lux.timestamp.isoformat(timespec='minutes')
@@ -55,17 +56,17 @@ class LightCsvLogger(Output):
 class StatusPrinter(Output):
     """Prints statuses to stdout at a configurable interval."""
 
-    def __init__(self, print_interval=0):
+    def __init__(self, print_interval: float = 0) -> None:
         self.print_interval = print_interval
         self._last_printed_time = float("-inf")
 
-    def setup(self):
+    def setup(self) -> None:
         pass
 
-    def off(self):
+    def off(self) -> None:
         pass
 
-    def output_status(self, status):
+    def output_status(self, status: Status) -> None:
         if time.time() - self._last_printed_time < self.print_interval:
             return
 

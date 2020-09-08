@@ -99,6 +99,9 @@ class DigitDisplay(LedIndicator):
         """Reset the display to an empty state."""
         self._display.show("    ")
 
+    def output_number(self, num: int):
+        self._display.number(num)
+
 
 class LuxDiffDisplay(DigitDisplay):
     def _get_number_output(self, status):
@@ -108,9 +111,6 @@ class LuxDiffDisplay(DigitDisplay):
 class PositionDisplay(DigitDisplay):
     def _get_number_output(self, status):
         return status.position
-
-    def update_position(self, position):
-        self._output_status(Status(None, None, position, None))
 
 
 class LedBarGraphs(LedIndicator):

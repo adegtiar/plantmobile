@@ -120,7 +120,7 @@ class PlatformDriver(Component):
                 self.position += increment.value
 
         if self._position_display:
-            self._position_display.update_position(self.position)
+            self._position_display.output_number(self.position)
 
     def move_direction(self, direction, stop_requested):
         logging.info("starting sequence move towards %s", direction)
