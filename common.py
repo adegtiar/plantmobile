@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from enum import Enum
+from typing import Any, Optional, Union
 
 # A reading of light sensor data.
 LuxReading = namedtuple('SensorReading',
@@ -13,6 +14,24 @@ class Edge(Enum):
     INNER = 100
 
 
+class Rotation(Enum):
+    CW = 0
+    CCW = 1
+
+
+class Direction(Enum):
+    OUTER = -1
+    INNER = +1
+
+    @property
+    def motor_rotation(self) -> Rotation:
+        return Rotation.CCW if self is Direction.OUTER else Rotation.CW
+
+    @property
+    def extreme_edge(self) -> Edge:
+        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
+
+
 class ButtonStatus(Enum):
     NONE_PRESSED = 0
     OUTER_PRESSED = 1
@@ -20,7 +39,7 @@ class ButtonStatus(Enum):
     BOTH_PRESSED = 3
 
     @property
-    def corresponding_direction(self):
+    def corresponding_direction(self) -> Union[Direction, None]:
         if self is ButtonStatus.OUTER_PRESSED:
             return Direction.OUTER
         elif self is ButtonStatus.INNER_PRESSED:
@@ -29,26 +48,12 @@ class ButtonStatus(Enum):
             return None
 
 
-class Direction(Enum):
-    OUTER = -1
-    INNER = +1
-
-    @property
-    def motor_rotation(self):
-        return Rotation.CCW if self is Direction.OUTER else Rotation.CW
-
-    @property
-    def extreme_edge(self):
-        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
-
-
-class Rotation(Enum):
-    CW = 0
-    CCW = 1
-
-
 class Status:
-    def __init__(self, lux, button, position, edge):
+    def __init__(self,
+            lux: Optional[LuxReading],
+            button: Optional[ButtonStatus],
+            position: Optional[int],
+            edge: Optional[Edge]) -> None:
         self.lux = lux
         self.button = button
         self.position = position
@@ -57,21 +62,21 @@ class Status:
 
 class Component(ABC):
     @abstractmethod
-    def setup(self):
+    def setup(self) -> None:
         pass
 
     @abstractmethod
-    def off(self):
+    def off(self) -> None:
         pass
 
 
 class Output(Component):
     @abstractmethod
-    def output_status(self, status):
+    def output_status(self, status: Status) -> None:
         pass
 
 
 class Input(Component):
     @abstractmethod
-    def read(self):
+    def read(self) -> Any:
         pass

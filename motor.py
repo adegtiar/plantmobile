@@ -5,7 +5,7 @@ import time
 
 from enum import Enum
 from gpiozero import LED, Button
-from RpiMotorLib import RpiMotorLib
+from RpiMotorLib import RpiMotorLib # type: ignore
 
 from common import Component, Rotation
 
