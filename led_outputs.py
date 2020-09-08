@@ -30,7 +30,7 @@ class LedIndicator(Output):
 
 
 class LedDirectionIndicator(LedIndicator):
-    DIFF_PERCENT_CUTOFF = 100
+    DIFF_PERCENT_CUTOFF = 50
 
     def __init__(self, outer_led_pin: int, inner_led_pin: int) -> None:
         self.outer_led_pin = outer_led_pin
