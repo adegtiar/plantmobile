@@ -34,7 +34,7 @@ class Direction(Enum):
     INNER = +1
 
     @property
-    def motor_direction(self):
+    def motor_rotation(self):
         return Rotation.CCW if self is Direction.OUTER else Rotation.CW
 
     @property

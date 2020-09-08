@@ -1,7 +1,5 @@
-# This example shows using two TSL2491 light sensors attached to TCA9548A channels 0 and 1.
-# Use with other I2C sensors would be similar.
-import adafruit_tsl2561
-import adafruit_tca9548a
+import adafruit_tsl2561 # type: ignore
+import adafruit_tca9548a # type: ignore
 import board
 import busio
 import logging

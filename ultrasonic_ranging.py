@@ -5,7 +5,7 @@ import logging
 import RPi.GPIO as GPIO
 import time
 
-from adafruit_hcsr04 import HCSR04
+from adafruit_hcsr04 import HCSR04  # type: ignore
 import board
 
 from common import Component

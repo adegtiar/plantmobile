@@ -4,7 +4,7 @@ import logging
 import RPi.GPIO as GPIO
 import time
 
-import tm1637
+import tm1637   # type: ignore
 
 from abc import abstractmethod
 from gpiozero import LED
@@ -192,11 +192,11 @@ class LedBarGraphs(LedIndicator):
 if __name__ == '__main__': # Program entrance
     logging.basicConfig(level=logging.DEBUG)
     logging.info('Running test program for led graphs...')
-    setup()
     try:
         max_level=16
         graphs = LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=8, max_level=max_level)
+        graphs.setup()
         while True:
             for i in range(0, max_level+2):
                 logging.info("setting level to ({}, {})".format(i, max_level-i))

@@ -133,7 +133,7 @@ class PlatformDriver(Component):
                 logging.info("stopping sequence move towards %s: at edge", direction)
                 return
             else:
-                self.motor.move_step(direction.motor_direction)
+                self.motor.move_step(direction.motor_rotation)
                 self._update_position(direction)
 
             # When moving towards the edge, reset our position if we've drifted.
