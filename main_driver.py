@@ -122,7 +122,7 @@ class PlatformDriver(Component):
         if self._position_display:
             self._position_display.update_position(self.position)
 
-    def move_direction(self, direction, should_continue):
+    def move_direction(self, direction, stop_requested):
         logging.info("starting sequence move towards %s", direction)
         stop_fmt = "stopping sequence move towards {}: %s (%d steps)".format(direction)
 
@@ -134,7 +134,7 @@ class PlatformDriver(Component):
             status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
             self.output_status(status)
 
-            if not should_continue(status):
+            if stop_requested(status):
                 logging.info(stop_fmt, "stopped", steps_travelled)
                 return
             elif status.region is direction.extreme_edge:
@@ -184,15 +184,15 @@ def cleanup(platforms):
     #GPIO.cleanup()
 
 
-def keep_moving_checker(manual_mode, manual_hold_button):
-    def keep_moving(status):
+def stop_requester(manual_mode, manual_hold_button):
+    def stop_requested(status):
         if manual_mode:
             # Keep moving while the button is held down.
-            return status.button is manual_hold_button
+            return not (status.button is manual_hold_button)
         else:
             # Keep moving unless any button is pressed to cancel it.
-            return status.button is ButtonPress.NONE
-    return keep_moving
+            return not (status.button is ButtonPress.NONE)
+    return stop_requested
 
 
 def control_loop(platform):
@@ -206,20 +206,17 @@ def control_loop(platform):
         if status.button is ButtonPress.OUTER:
             if not manual_mode:
                 platform.blink(times=2)
-            keep_moving_outer = keep_moving_checker(manual_mode, ButtonPress.OUTER)
-            platform.move_direction(Direction.OUTER, should_continue=keep_moving_outer)
+            platform.move_direction(Direction.OUTER, stop_requester(manual_mode, ButtonPress.OUTER))
         if status.button is ButtonPress.INNER:
             if not manual_mode:
                 platform.blink(times=2)
-            keep_moving_inner = keep_moving_checker(manual_mode, ButtonPress.INNER)
-            platform.move_direction(Direction.INNER, should_continue=keep_moving_inner)
+            platform.move_direction(Direction.INNER, stop_requester(manual_mode, ButtonPress.INNER))
         if status.button is ButtonPress.BOTH:
             # Toggle between manual mode and auto mode.
             platform.blink(times=3)
             manual_mode = not manual_mode
             if not manual_mode:
-                keep_moving_auto = keep_moving_checker(False, None)
-                platform.move_direction(Direction.OUTER, should_continue=keep_moving_auto)
+                platform.move_direction(Direction.OUTER, stop_requester(False, None))
         elif status.button is ButtonPress.NONE:
             platform.motor.off()
 
