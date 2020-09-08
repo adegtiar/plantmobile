@@ -15,7 +15,7 @@ LAST_N_POINTS = 500
 style.use('seaborn-whitegrid')
 fig = plt.figure(num='Luminosity of Outer & Inner Sensors', figsize=[13,3])
 ax1 = fig.add_subplot(1,1,1)
-def animate(i):
+def animate(i: int) -> None:
     ftemp = 'data/sensor_log.csv'
     fh = open(ftemp)
     outer_luxes = []
