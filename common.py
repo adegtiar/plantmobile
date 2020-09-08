@@ -4,14 +4,15 @@ from enum import Enum
 from typing import Any, Optional, Union
 
 # A reading of light sensor data.
-LuxReading = namedtuple('SensorReading',
+LuxReading = namedtuple('LuxReading',
         ['outer', 'inner', 'avg', 'diff', 'diff_percent', 'timestamp', 'name'])
 
 
-class Edge(Enum):
-    NONE = None
-    OUTER = 0
-    INNER = 100
+class Region(Enum):
+    """Indicates the region of the table corresponding to the position."""
+    OUTER_EDGE = 0
+    MID = None
+    INNER_EDGE = 100
 
 
 class Rotation(Enum):
@@ -28,8 +29,8 @@ class Direction(Enum):
         return Rotation.CCW if self is Direction.OUTER else Rotation.CW
 
     @property
-    def extreme_edge(self) -> Edge:
-        return Edge.OUTER if self is Direction.OUTER else Edge.INNER
+    def extreme_edge(self) -> Region:
+        return Region.OUTER_EDGE if self is Direction.OUTER else Region.INNER_EDGE
 
 
 class ButtonStatus(Enum):
@@ -53,11 +54,11 @@ class Status:
             lux: Optional[LuxReading],
             button: Optional[ButtonStatus],
             position: Optional[int],
-            edge: Optional[Edge]) -> None:
+            region: Optional[Region]) -> None:
         self.lux = lux
         self.button = button
         self.position = position
-        self.edge = edge
+        self.region = region
 
 
 class Component(ABC):

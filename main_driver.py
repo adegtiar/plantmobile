@@ -10,7 +10,7 @@ from gpiozero import Button
 
 import motor
 
-from common import ButtonStatus, Component, Direction, Edge, Output, Status
+from common import ButtonStatus, Component, Direction, Region, Output, Status
 from led_outputs import LedBarGraphs, LedDirectionIndicator, LuxDiffDisplay, PositionDisplay
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger, StatusPrinter
@@ -73,7 +73,7 @@ class PlatformDriver(Component):
                 lux=self.light_sensors.read(),
                 button=self.get_button_status(),
                 position=self.position,
-                edge=self.get_edge_status(reset_position_on_edge))
+                region=self.get_region(reset_position_on_edge))
 
     def output_status(self, status):
         """Updates the indicators and logs with the given status."""
@@ -95,28 +95,28 @@ class PlatformDriver(Component):
         else:
             return ButtonStatus.NONE_PRESSED
 
-    def get_edge_status(self, reset_position_on_edge=False):
-        if self.position == Edge.INNER.value:
-            return Edge.INNER
+    def get_region(self, reset_position_on_edge=False):
+        if self.position == Region.INNER_EDGE.value:
+            return Region.INNER_EDGE
 
         at_outer_edge = not self.distance_sensor.is_in_range()
         if at_outer_edge and (self.position is None or reset_position_on_edge):
             logging.info("At outer edge. Setting position to zero.")
-            self._update_position(Edge.OUTER)
-        return Edge.OUTER if at_outer_edge else Edge.NONE
+            self._update_position(Region.OUTER_EDGE)
+        return Region.OUTER_EDGE if at_outer_edge else Region.MID
 
     def _update_position(self, increment):
-        if increment == Edge.OUTER:
+        if increment == Region.OUTER_EDGE:
             # Initialize the position to 0 at the edge.
             if self.position is None:
-                logging.info("Initializing edge position to {}".format(Edge.OUTER))
-            elif self.position != Edge.OUTER.value:
+                logging.info("Initializing edge position to {}".format(Region.OUTER_EDGE))
+            elif self.position != Region.OUTER_EDGE.value:
                 log = logging.info if abs(self.position) < 10 else logging.warning
-                log("Resetting edge position to {} (drift: {})".format(Edge.OUTER, self.position))
-            self.position = Edge.OUTER.value
+                log("Resetting outer edge position (drift: {})".format( self.position))
+            self.position = Region.OUTER_EDGE.value
         else:
             # We've stepped in a direction, so increment.
-            assert isinstance(increment, Direction), "Increment must be a Direction or Edge"
+            assert isinstance(increment, Direction), "Increment must be a Direction or Region"
 
             if self.position is not None:
                 # Increment the position if it's been set.
@@ -129,7 +129,7 @@ class PlatformDriver(Component):
         logging.info("starting sequence move towards %s", direction)
         status = self.get_status()
         while should_continue(status):
-            if status.edge is direction.extreme_edge:
+            if status.region is direction.extreme_edge:
                 logging.info("stopping sequence move towards %s: at edge", direction)
                 return
             else:

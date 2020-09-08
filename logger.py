@@ -77,6 +77,6 @@ class StatusPrinter(Output):
         print("diff percent:\t {}%".format(status.lux.diff_percent))
         print("button_status:\t", status.button.name)
         print("position:\t", status.position)
-        print("at edge:\t", status.edge)
+        print("region:\t\t", status.region)
         print()
         self._last_printed_time = time.time()
