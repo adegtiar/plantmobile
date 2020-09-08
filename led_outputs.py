@@ -34,47 +34,50 @@ class LedDirectionIndicator(LedIndicator):
     def __init__(self, outer_led_pin: int, inner_led_pin: int) -> None:
         self.outer_led_pin = outer_led_pin
         self.inner_led_pin = inner_led_pin
-        self.outer_led = None
-        self.inner_led = None
+        self._outer_led = None
+        self._inner_led = None
 
     def setup(self) -> None:
-        self.outer_led = LED(self.outer_led_pin)
-        self.inner_led = LED(self.inner_led_pin)
+        self._outer_led = LED(self.outer_led_pin)
+        self._inner_led = LED(self.inner_led_pin)
 
     def on(self) -> None:
-        self.outer_led.on()
-        self.inner_led.on()
+        assert self._outer_led and self._inner_led, "Must call setup before outputting"
+
+        self._outer_led.on()
+        self._inner_led.on()
 
     def off(self) -> None:
         """Reset the LEDs to off."""
-        if self.outer_led:
-            self.outer_led.off()
-        if self.inner_led:
-            self.inner_led.off()
+        if self._outer_led:
+            self._outer_led.off()
+        if self._inner_led:
+            self._inner_led.off()
 
     def _output_status(self, status: Status) -> None:
-        assert self.outer_led and self.inner_led, "Must call setup before outputing"
+        assert self._outer_led and self._inner_led, "Must call setup before outputting"
+
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
         if abs(lux.diff_percent) >= LedDirectionIndicator.DIFF_PERCENT_CUTOFF:
             if lux.outer > lux.inner:
                 logging.debug("lighting outer led")
-                self.outer_led.on()
-                self.inner_led.off()
+                self._outer_led.on()
+                self._inner_led.off()
             else:
                 assert lux.outer < lux.inner, "inconsistent lux reading"
                 logging.debug("lighting inner led")
-                self.inner_led.on()
-                self.outer_led.off()
+                self._inner_led.on()
+                self._outer_led.off()
         else:
-            self.inner_led.off()
-            self.outer_led.off()
+            self._inner_led.off()
+            self._outer_led.off()
 
 
 class DigitDisplay(LedIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin, data_pin, brightness=2):
+    def __init__(self, clock_pin: int, data_pin: int, brightness: int=2) -> None:
         self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
         # The brightness of the display, from 0-7
         self.brightness=brightness
@@ -99,7 +102,7 @@ class DigitDisplay(LedIndicator):
         """Reset the display to an empty state."""
         self._display.show("    ")
 
-    def output_number(self, num: int):
+    def output_number(self, num: int) -> None:
         self._display.number(num)
 
 
@@ -125,8 +128,8 @@ class LedBarGraphs(LedIndicator):
     A level >= max_level will light all leds.
     """
 
-    def __init__(self, data_pin, latch_pin, clock_pin,
-            min_level=0, num_leds=8, max_level=8, num_graphs=2):
+    def __init__(self, data_pin: int, latch_pin: int, clock_pin: int,
+            min_level: int=0, num_leds: int=8, max_level: int=8, num_graphs: int=2) -> None:
         self.data_pin = data_pin
         self.latch_pin = latch_pin
         self.clock_pin = clock_pin
@@ -136,7 +139,7 @@ class LedBarGraphs(LedIndicator):
         self.num_graphs = num_graphs
         self.levels_per_led = (max_level - min_level) / (num_leds - 1)
 
-    def setup(self):
+    def setup(self) -> None:
         logging.info(
                 "initializing {} graphs with {} leds, min {}, max {}, and {} levels per led".format(
                     self.num_graphs, self.num_leds, self.min_level,
@@ -151,7 +154,7 @@ class LedBarGraphs(LedIndicator):
         self.set_levels(*[0]*self.num_graphs)
 
     # Set led values for one graph.
-    def _set_leds(self, led_level):
+    def _set_leds(self, led_level: int) -> None:
         assert led_level <= self.num_leds, \
                 "led_level {} higher than num leds {}".format(led_level, self.num_leds)
         # Keep all leds on up to and not including the level.
@@ -162,14 +165,14 @@ class LedBarGraphs(LedIndicator):
             GPIO.output(self.clock_pin, GPIO.HIGH)  # Set led bit and shift to next register.
         GPIO.output(self.clock_pin, GPIO.LOW)       # Keep clock pin low.
 
-    def _get_leds_for_level(self, level):
+    def _get_leds_for_level(self, level: int) -> int:
         # Scale the level range to the led range.
         led_level = int((level - self.min_level) / self.levels_per_led + 1)
         # Clip the led_level between the min, max.
         return min(max(led_level, 0), self.num_leds)
 
     # Update the led graphs with a new set of levels.
-    def set_levels(self, *levels):
+    def set_levels(self, *levels: int) -> None:
         """Updates the bar graph with the levels specified, one per graph."""
         assert len(levels) == self.num_graphs, "call set_levels with one level per graph"
         GPIO.output(self.latch_pin, GPIO.LOW)   # Prepare the shift registers for input
@@ -181,11 +184,11 @@ class LedBarGraphs(LedIndicator):
         GPIO.output(self.latch_pin, GPIO.HIGH)  # Latch the output to the latest register values.
         GPIO.output(self.latch_pin, GPIO.LOW)   # Keep latch pin low.
 
-    def off(self):
+    def off(self) -> None:
         logging.debug("Resetting graphs to empty...")
         self.set_levels(*[0]*self.num_graphs)
 
-    def _output_status(self, status):
+    def _output_status(self, status: Status) -> None:
         self.set_levels(status.lux.inner, status.lux.outer)
 
 

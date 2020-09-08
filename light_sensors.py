@@ -34,7 +34,7 @@ class LightSensorReader(Input):
             self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.outer_pin])
             self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.inner_pin])
 
-    def off(self):
+    def off(self) -> None:
         # TODO: de-init tsl2561 or just handled by main?
         pass
 
@@ -49,8 +49,8 @@ class LightSensorReader(Input):
         return cls._mux
 
     # Get a tuple of the current luminosity reading.
-    def read(self):
-        self.setup()
+    def read(self) -> LuxReading:
+        assert self._outer_tsl and self._inner_tsl, "Must call setup before reading"
 
         outer = self._outer_tsl.infrared
         inner = self._inner_tsl.infrared
