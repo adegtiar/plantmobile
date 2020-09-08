@@ -133,6 +133,7 @@ class LedBarGraphs(LedIndicator):
         self.data_pin = data_pin
         self.latch_pin = latch_pin
         self.clock_pin = clock_pin
+        # TODO: maybe get rid of min level?
         self.min_level = min_level
         self.num_leds = num_leds
         self.max_level = max_level
