@@ -56,6 +56,6 @@ class LightSensorReader(Input):
         inner = self._inner_tsl.infrared
         timestamp = datetime.now()
         avg = int(mean((outer, inner)))
-        diff = outer - inner
+        diff = inner - outer
         diff_percent = int(diff/avg * 100) if avg else 0
         return LuxReading(outer, inner, avg, diff, diff_percent, timestamp, self.name)

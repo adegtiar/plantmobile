@@ -157,7 +157,7 @@ class PlatformDriver(Component):
                 return
             elif steps == max_distance:
                 # Terminate with an explicit check to run edge check first.
-                logging.warning(stop_fmt, "went {} steps without reaching edge".format(steps))
+                logging.warning(stop_fmt, "travelled max distance without reaching edge", steps)
                 return
             else:
                 self.motor.move_steps(direction.motor_rotation, STEPS_PER_MOVE)
@@ -249,7 +249,7 @@ def control_loop(platform: PlatformDriver) -> NoReturn:
                 if not manual_mode:
                     platform.move_direction(
                             Direction.OUTER,
-                            stop_requested=lambda s: not status.button is ButtonPress.NONE)
+                            stop_requested=lambda s: not (s.button is ButtonPress.NONE))
             elif status.button is ButtonPress.NONE:
                 platform.motor.off()
             else:
