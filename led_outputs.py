@@ -12,7 +12,7 @@ from gpiozero import LED
 
 from common import Output, Status
 
-DIFF_PERCENT_CUTOFF = 50
+DIFF_PERCENT_CUTOFF = 30
 
 class LedIndicator(Output):
     # The minimum average lux at which it will output anything.
