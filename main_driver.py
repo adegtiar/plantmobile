@@ -80,16 +80,16 @@ class PlatformDriver(Component):
         if self.motor:
             self.motor.off()
 
-    def get_status(self, reset_position_on_edge: bool = False) -> Status:
+    def get_status(self, force_edge_check: bool = False) -> Status:
         """Reads the current lux, button, position, and edge from sensors and state.
 
-        reset_position_on_edge: whether to override the already-set position if we detect an edge.
+        force_edge_check: whether to check the distance sensor to verify the edge position.
         """
         return Status(
                 lux=self.light_sensors.read(),
                 button=self.get_button_pressed(),
                 position=self.position,
-                region=self.get_region(reset_position_on_edge))
+                region=self.get_region(force_edge_check))
 
     def output_status(self, status: Status) -> None:
         """Updates the indicators and logs with the given status."""
@@ -102,19 +102,23 @@ class PlatformDriver(Component):
                 outer_pressed=bool(self.outer_button and self.outer_button.is_pressed),
                 inner_pressed=bool(self.inner_button and self.inner_button.is_pressed))
 
-    def get_region(self, reset_position_on_edge: bool = False) -> Region:
+    def get_region(self, force_edge_check: bool = False) -> Region:
         """Get the region of the table in which the platform is located.
 
         Note: upon intialization when the position is unknown, we might report
-        being in MID while we're actually at the inner edge."""
+        being in MID while we're actually at the inner edge.
+        """
+        assert self.distance_sensor, "distance sensor must be configured"
+
         if self.position == Region.INNER_EDGE.value:
             return Region.INNER_EDGE
 
-        assert self.distance_sensor, "distance sensor must be configured"
-        at_outer_edge = not self.distance_sensor.is_in_range()
-        if at_outer_edge and (self.position is None or reset_position_on_edge):
-            logging.info("At outer edge. Setting position to zero.")
-            self._reset_pos_to_outer_edge()
+        at_outer_edge = self.position is Region.OUTER_EDGE.value
+        if self.position is None or force_edge_check:
+            at_outer_edge = not self.distance_sensor.is_in_range()
+            if at_outer_edge:
+                logging.info("At outer edge. Setting position to zero.")
+                self._reset_pos_to_outer_edge()
         return Region.OUTER_EDGE if at_outer_edge else Region.MID
 
     def _reset_pos_to_outer_edge(self) -> None:
@@ -140,8 +144,8 @@ class PlatformDriver(Component):
         max_distance = int(Region.size() * 1.1)
 
         for steps in range(max_distance+1):
-            # When moving towards the edge, reset our position if we've drifted.
-            status = self.get_status(reset_position_on_edge=direction is Direction.OUTER)
+            # When moving towards the outer edge, cross-check with the sensor in case we've drifted.
+            status = self.get_status(force_edge_check=direction is Direction.OUTER)
             self.output_status(status)
 
             if stop_requested(status):
