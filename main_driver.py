@@ -28,7 +28,7 @@ STEPS_PER_MOVE = 7
 class PlatformDriver(Component):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
-    def __init__(self, 
+    def __init__(self,
             name: str,
             light_sensors: LightSensorReader,
             motor: Optional[StepperMotor] = None,
@@ -81,7 +81,10 @@ class PlatformDriver(Component):
             self.motor.off()
 
     def get_status(self, reset_position_on_edge: bool = False) -> Status:
-        """Reads the current lux, button, position, and edge from sensors and state."""
+        """Reads the current lux, button, position, and edge from sensors and state.
+
+        reset_position_on_edge: whether to override the already-set position if we detect an edge.
+        """
         return Status(
                 lux=self.light_sensors.read(),
                 button=self.get_button_pressed(),
@@ -111,25 +114,17 @@ class PlatformDriver(Component):
         at_outer_edge = not self.distance_sensor.is_in_range()
         if at_outer_edge and (self.position is None or reset_position_on_edge):
             logging.info("At outer edge. Setting position to zero.")
-            self._update_position(Region.OUTER_EDGE)
+            self._reset_pos_to_outer_edge()
         return Region.OUTER_EDGE if at_outer_edge else Region.MID
 
-    def _update_position(self, increment: Union[Region, Direction]) -> None:
-        if increment == Region.OUTER_EDGE:
-            # Initialize the position to 0 at the edge.
-            if self.position is None:
-                logging.info("Initializing edge position to {}".format(Region.OUTER_EDGE))
-            elif self.position != Region.OUTER_EDGE.value:
-                log = logging.info if abs(self.position) < 10 else logging.warning
-                log("Resetting outer edge position (drift: {})".format( self.position))
-            self.position = Region.OUTER_EDGE.value
-        else:
-            # We've stepped in a direction, so increment.
-            assert isinstance(increment, Direction), "Increment must be a Direction or Region"
-
-            if self.position is not None:
-                # Increment the position if it's been set.
-                self.position += increment.value
+    def _reset_pos_to_outer_edge(self) -> None:
+        """Reset the current internal position to be 0, i.e. the OUTER_EDGE."""
+        if self.position is None:
+            logging.info("Initializing edge position to {}".format(Region.OUTER_EDGE))
+        elif self.position != Region.OUTER_EDGE.value:
+            log = logging.info if abs(self.position) < 10 else logging.warning
+            log("Resetting outer edge position (drift: {})".format( self.position))
+        self.position = Region.OUTER_EDGE.value
 
         if self._position_display:
             self._position_display.output_number(self.position)
@@ -161,7 +156,11 @@ class PlatformDriver(Component):
                 return
             else:
                 self.motor.move_steps(direction.motor_rotation, STEPS_PER_MOVE)
-                self._update_position(direction)
+                # Update the internal position, if it's already been intialized.
+                if self.position is not None:
+                    self.position += direction.value
+                if self._position_display:
+                    self._position_display.output_number(self.position)
         assert False, "should terminate within the loop"
 
     def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
@@ -186,14 +185,14 @@ class PlatformDriver(Component):
 
 def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
     # Use BCM GPIO numbering.
-    GPIO.setmode(GPIO.BCM)        
+    GPIO.setmode(GPIO.BCM)
 
     # Initialize all platforms and return the ones that are failure-free.
     working_platforms = []
     for platform in platforms:
         try:
             platform.setup()
-        except ValueError as e: 
+        except ValueError as e:
             # This might happen if the car is disconnected.
             logging.error(e)
             logging.warning(

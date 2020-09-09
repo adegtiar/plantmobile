@@ -12,6 +12,7 @@ from gpiozero import LED
 
 from common import Output, Status
 
+DIFF_PERCENT_CUTOFF = 50
 
 class LedIndicator(Output):
     # The minimum average lux at which it will output anything.
@@ -30,7 +31,6 @@ class LedIndicator(Output):
 
 
 class LedDirectionIndicator(LedIndicator):
-    DIFF_PERCENT_CUTOFF = 50
 
     def __init__(self, outer_led_pin: int, inner_led_pin: int) -> None:
         self.outer_led_pin = outer_led_pin
@@ -60,7 +60,7 @@ class LedDirectionIndicator(LedIndicator):
 
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
-        if abs(lux.diff_percent) >= LedDirectionIndicator.DIFF_PERCENT_CUTOFF:
+        if abs(lux.diff_percent) >= DIFF_PERCENT_CUTOFF:
             if lux.outer > lux.inner:
                 logging.debug("lighting outer led")
                 self._outer_led.on()
