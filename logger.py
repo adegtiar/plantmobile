@@ -79,5 +79,6 @@ class StatusPrinter(Output):
         print("button_status:\t", status.button.name)
         print("position:\t", status.position)
         print("region:\t\t", status.region)
+        print("motor voltage:\t {:.3f}".format(status.motor_voltage))
         print()
         self._last_printed_time = time.time()

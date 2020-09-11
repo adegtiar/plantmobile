@@ -15,6 +15,7 @@ from logger import LightCsvLogger, StatusPrinter
 from motor import StepperMotor
 from platform_driver import PlatformDriver
 from ultrasonic_ranging import DistanceSensor
+from battery_monitor import VoltageReader
 
 logging.basicConfig(level=logging.INFO)
 
@@ -102,6 +103,7 @@ if __name__ == '__main__':
             name="Stepper",
             light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
             motor=StepperMotor(27, 22, 10, 9),
+            voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
             distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),

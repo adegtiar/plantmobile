@@ -11,6 +11,7 @@ from led_outputs import LedDirectionIndicator, PositionDisplay
 from light_sensors import LightSensorReader
 from motor import StepperMotor
 from ultrasonic_ranging import DistanceSensor
+from battery_monitor import VoltageReader
 
 STEPS_PER_MOVE = 7
 
@@ -22,6 +23,7 @@ class PlatformDriver(Component):
             name: str,
             light_sensors: LightSensorReader,
             motor: Optional[StepperMotor] = None,
+            voltage_reader: Optional[VoltageReader] = None,
             distance_sensor: Optional[DistanceSensor] = None,
             direction_leds: Optional[LedDirectionIndicator] = None,
             outer_button: Optional[Button] = None,
@@ -31,6 +33,7 @@ class PlatformDriver(Component):
         self.name = name
         self.light_sensors = light_sensors
         self.motor = motor
+        self.voltage_reader = voltage_reader
         self.distance_sensor = distance_sensor
         self.outer_button = outer_button
         self.inner_button = inner_button
@@ -56,6 +59,7 @@ class PlatformDriver(Component):
         # Set up the light sensors for reading.
         self.light_sensors.name = self.name
         self.light_sensors.setup()
+        self.voltage_reader.setup()
         if self.distance_sensor:
             self.distance_sensor.setup()
         if self.motor:
@@ -77,6 +81,7 @@ class PlatformDriver(Component):
         """
         return Status(
                 lux=self.light_sensors.read(),
+                motor_voltage=self.voltage_reader.read() if self.voltage_reader else None,
                 button=self.get_button_pressed(),
                 position=self.position,
                 region=self.get_region(force_edge_check))
