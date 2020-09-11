@@ -78,7 +78,7 @@ class DirectionalLeds(LedIndicator):
 class DigitDisplay(LedIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin: int, data_pin: int, brightness: int=2) -> None:
+    def __init__(self, clock_pin: int, data_pin: int, brightness: int=3) -> None:
         self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
         # The brightness of the display, from 0-7
         self.brightness=brightness
@@ -104,6 +104,10 @@ class DigitDisplay(LedIndicator):
             self._display.number(num)
         else:
             self._display.show("    ")
+
+    def show(self, output):
+        assert len(output) == 4, "output must be 4 characters"
+        self._display.show(output)
 
 
 class LuxDiffDisplay(DigitDisplay):

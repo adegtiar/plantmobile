@@ -14,6 +14,7 @@ from ultrasonic_ranging import DistanceSensor
 from power_monitor import VoltageReader
 
 STEPS_PER_MOVE = 7
+MOTOR_VOLTAGE_CUTOFF = 4.0
 
 
 class PlatformDriver(Component):
@@ -129,6 +130,10 @@ class PlatformDriver(Component):
         if self._position_display:
             self._position_display.output_number(self.position)
 
+    def _voltage_low(self, status):
+        """Returns whether the motor voltage is too low to actuate."""
+        return status.motor_voltage is not None and status.motor_voltage < MOTOR_VOLTAGE_CUTOFF
+
     def move_direction(self,
             direction: Direction, stop_requested: Callable[[Status], bool]) -> None:
         assert self.motor, "motor must be configured"
@@ -144,7 +149,11 @@ class PlatformDriver(Component):
             status = self.get_status(force_edge_check=direction is Direction.OUTER)
             self.output_status(status)
 
-            if stop_requested(status):
+            if self._voltage_low(status):
+                logging.error(stop_fmt, "insufficient voltage", steps)
+                self.display_error("baTT")
+                return
+            elif stop_requested(status):
                 logging.info(stop_fmt, "stopped", steps)
                 return
             elif status.region is direction.extreme_edge:
@@ -162,6 +171,21 @@ class PlatformDriver(Component):
                 if self._position_display:
                     self._position_display.output_number(self.position)
         assert False, "should terminate within the loop"
+
+    def display_error(self, output: str, times: int = 2,
+            on_secs: float = 1, off_secs: float = 0.5) -> None:
+        assert self._position_display, "position display must be configured"
+
+        for i in range(times):
+            self._position_display.show(output)
+
+            time.sleep(on_secs)
+
+            # Turn LEDs off
+            self._position_display.off()
+
+            if i != times-1:
+                time.sleep(off_secs)
 
     def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
         assert self._direction_leds, "LEDs must be configured"
