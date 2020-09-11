@@ -11,7 +11,7 @@ from common import Input, LuxReading
 from adafruit_tca9548a import TCA9548A
 
 
-class LightSensorReader(Input):
+class LightSensor(Input):
     """Read lux data from an inner and outer sensor."""
 
     # This is the i2c multiplexer used for the light sensors (to deal with address conflict).
@@ -31,8 +31,8 @@ class LightSensorReader(Input):
             assert self._inner_tsl is None, "partially initialized state"
             logging.info("Initializing {} light sensors with mux pins Outer: {}, Inner: {}".format(
                 self.name, self.outer_pin, self.inner_pin))
-            self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.outer_pin])
-            self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensorReader.get_mux()[self.inner_pin])
+            self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensor.get_mux()[self.outer_pin])
+            self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensor.get_mux()[self.inner_pin])
 
     def off(self) -> None:
         # TODO: de-init tsl2561 or just handled by main?

@@ -9,8 +9,8 @@ from typing import Callable, Iterable, List, NoReturn
 from gpiozero import Button
 
 from common import ButtonPress, Direction, Status
-from led_outputs import LedBarGraphs, LedDirectionIndicator, LuxDiffDisplay, PositionDisplay
-from light_sensors import LightSensorReader
+from led_outputs import DirectionalLeds, LedBarGraphs, LuxDiffDisplay, PositionDisplay
+from light_sensors import LightSensor
 from logger import LightCsvLogger, StatusPrinter
 from motor import StepperMotor
 from platform_driver import PlatformDriver
@@ -101,13 +101,13 @@ def control_loop(platform: PlatformDriver) -> NoReturn:
 if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
-            light_sensors=LightSensorReader(outer_pin=2, inner_pin=3),
+            light_sensors=LightSensor(outer_pin=2, inner_pin=3),
             motor=StepperMotor(27, 22, 10, 9),
             voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
             distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
             outer_button=Button(21),
             inner_button=Button(16),
-            direction_leds=LedDirectionIndicator(outer_led_pin=20, inner_led_pin=12),
+            direction_leds=DirectionalLeds(outer_led_pin=20, inner_led_pin=12),
             outputs=[
                 LightCsvLogger("data/car_sensor_log.csv"),
                 LedBarGraphs(data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     DC_CAR = PlatformDriver(
             name="DC",
-            light_sensors=LightSensorReader(outer_pin=1, inner_pin=0),
+            light_sensors=LightSensor(outer_pin=1, inner_pin=0),
             outputs=[
                 LightCsvLogger("data/base_sensor_log.csv"),
             ])

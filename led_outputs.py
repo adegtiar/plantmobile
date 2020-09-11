@@ -30,7 +30,7 @@ class LedIndicator(Output):
             self._output_status(status)
 
 
-class LedDirectionIndicator(LedIndicator):
+class DirectionalLeds(LedIndicator):
 
     def __init__(self, outer_led_pin: int, inner_led_pin: int) -> None:
         self.outer_led_pin = outer_led_pin

@@ -7,8 +7,8 @@ from typing import Callable, Iterable, Optional, Union
 from gpiozero import Button
 
 from common import ButtonPress, Component, Direction, Region, Output, Status
-from led_outputs import LedDirectionIndicator, PositionDisplay
-from light_sensors import LightSensorReader
+from led_outputs import DirectionalLeds, PositionDisplay
+from light_sensors import LightSensor
 from motor import StepperMotor
 from ultrasonic_ranging import DistanceSensor
 from power_monitor import VoltageReader
@@ -21,11 +21,11 @@ class PlatformDriver(Component):
 
     def __init__(self,
             name: str,
-            light_sensors: LightSensorReader,
+            light_sensors: LightSensor,
             motor: Optional[StepperMotor] = None,
             voltage_reader: Optional[VoltageReader] = None,
             distance_sensor: Optional[DistanceSensor] = None,
-            direction_leds: Optional[LedDirectionIndicator] = None,
+            direction_leds: Optional[DirectionalLeds] = None,
             outer_button: Optional[Button] = None,
             inner_button: Optional[Button] = None,
             outputs: Iterable[Output] = (),
