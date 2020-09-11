@@ -59,7 +59,8 @@ class PlatformDriver(Component):
         # Set up the light sensors for reading.
         self.light_sensors.name = self.name
         self.light_sensors.setup()
-        self.voltage_reader.setup()
+        if self.voltage_reader:
+            self.voltage_reader.setup()
         if self.distance_sensor:
             self.distance_sensor.setup()
         if self.motor:

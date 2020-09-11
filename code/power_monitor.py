@@ -4,8 +4,8 @@ import board
 import busio
 import sys
 
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
+from adafruit_ads1x15.ads1115 import ADS1115  # type: ignore
+from adafruit_ads1x15.analog_in import AnalogIn # type: ignore
 
 from common import Input
 
@@ -31,7 +31,7 @@ class VoltageReader(Input):
     def setup(self) -> None:
         if self._chan is None:
             i2c = busio.I2C(board.SCL, board.SDA)
-            ads = ADS.ADS1115(i2c)
+            ads = ADS1115(i2c)
             self._chan = AnalogIn(ads, self.analog_pin)
 
     def off(self) -> None:
