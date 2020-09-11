@@ -13,7 +13,7 @@ from led_outputs import LedBarGraphs, LedDirectionIndicator, LuxDiffDisplay, Pos
 from light_sensors import LightSensorReader
 from logger import LightCsvLogger, StatusPrinter
 from motor import StepperMotor
-from platform import PlatformDriver
+from platform_driver import PlatformDriver
 from ultrasonic_ranging import DistanceSensor
 
 logging.basicConfig(level=logging.INFO)
