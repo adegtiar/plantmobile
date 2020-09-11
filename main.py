@@ -15,7 +15,7 @@ from logger import LightCsvLogger, StatusPrinter
 from motor import StepperMotor
 from platform_driver import PlatformDriver
 from ultrasonic_ranging import DistanceSensor
-from battery_monitor import VoltageReader
+from power_monitor import VoltageReader
 
 logging.basicConfig(level=logging.INFO)
 

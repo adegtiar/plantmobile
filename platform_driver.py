@@ -11,7 +11,7 @@ from led_outputs import LedDirectionIndicator, PositionDisplay
 from light_sensors import LightSensorReader
 from motor import StepperMotor
 from ultrasonic_ranging import DistanceSensor
-from battery_monitor import VoltageReader
+from power_monitor import VoltageReader
 
 STEPS_PER_MOVE = 7
 
