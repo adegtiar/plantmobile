@@ -4,7 +4,7 @@ import time
 from enum import Enum
 from typing import Callable, Iterable, Optional, Union
 
-from gpiozero import Button
+from gpiozero import Button, TonalBuzzer
 
 from common import ButtonPress, Component, Direction, Region, Output, Status
 from led_outputs import DirectionalLeds, PositionDisplay
@@ -15,6 +15,7 @@ from power_monitor import VoltageReader
 
 STEPS_PER_MOVE = 7
 MOTOR_VOLTAGE_CUTOFF = 4.0
+ERROR_TONE_HZ = 220
 
 
 class PlatformDriver(Component):
@@ -24,12 +25,13 @@ class PlatformDriver(Component):
             name: str,
             light_sensors: LightSensor,
             motor: Optional[StepperMotor] = None,
-            voltage_reader: Optional[VoltageReader] = None,
             distance_sensor: Optional[DistanceSensor] = None,
             direction_leds: Optional[DirectionalLeds] = None,
             outer_button: Optional[Button] = None,
             inner_button: Optional[Button] = None,
             outputs: Iterable[Output] = (),
+            voltage_reader: Optional[VoltageReader] = None,
+            buzzer: Optional[TonalBuzzer] = None,
         ) -> None:
         self.name = name
         self.light_sensors = light_sensors
@@ -39,6 +41,7 @@ class PlatformDriver(Component):
         self.outer_button = outer_button
         self.inner_button = inner_button
         self.outputs = list(outputs)
+        self.buzzer = buzzer
         self._position_display = None
 
         self._direction_leds = direction_leds
@@ -151,7 +154,7 @@ class PlatformDriver(Component):
 
             if self._voltage_low(status):
                 logging.error(stop_fmt, "insufficient voltage", steps)
-                self.display_error("baTT")
+                self.output_error("baTT")
                 return
             elif stop_requested(status):
                 logging.info(stop_fmt, "stopped", steps)
@@ -172,17 +175,20 @@ class PlatformDriver(Component):
                     self._position_display.output_number(self.position)
         assert False, "should terminate within the loop"
 
-    def display_error(self, output: str, times: int = 2,
+    def output_error(self, output: str, times: int = 1,
             on_secs: float = 1, off_secs: float = 0.5) -> None:
-        assert self._position_display, "position display must be configured"
+        assert self._position_display and self.buzzer, \
+                "position display and buzzer must be configured"
 
         for i in range(times):
             self._position_display.show(output)
+            self.buzzer.play(ERROR_TONE_HZ)
 
             time.sleep(on_secs)
 
-            # Turn LEDs off
+            # Turn LEDs and buzzer off
             self._position_display.off()
+            self.buzzer.stop()
 
             if i != times-1:
                 time.sleep(off_secs)
