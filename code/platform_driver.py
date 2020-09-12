@@ -2,7 +2,7 @@ import logging
 import time
 
 from enum import Enum
-from typing import Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable, Optional, Union
 
 from gpiozero import Button, TonalBuzzer
 
@@ -175,39 +175,35 @@ class PlatformDriver(Component):
                     self._position_display.output_number(self.position)
         assert False, "should terminate within the loop"
 
+    def _blink(self, on: Callable, off: Callable,
+            times: int, on_secs: float, off_secs: float) -> None:
+        for i in range(times):
+            on()
+            time.sleep(on_secs)
+            off()
+            if i != times-1:
+                time.sleep(off_secs)
+
     def output_error(self, output: str, times: int = 1,
             on_secs: float = 1, off_secs: float = 0.5) -> None:
         assert self._position_display and self.buzzer, \
                 "position display and buzzer must be configured"
-
-        for i in range(times):
+        def on():
             self._position_display.show(output)
             self.buzzer.play(ERROR_TONE_HZ)
-
-            time.sleep(on_secs)
-
-            # Turn LEDs and buzzer off
+        def off():
             self._position_display.off()
             self.buzzer.stop()
-
-            if i != times-1:
-                time.sleep(off_secs)
+        self._blink(on, off, times=1, on_secs=1, off_secs=0.5)
 
     def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
         assert self._direction_leds, "LEDs must be configured"
-
-        for i in range(times):
-            # Turn LEDs on
+        def on():
             self._direction_leds.on()
             if self.motor:
                 self.motor.all_on()
-
-            time.sleep(pause_secs)
-
-            # Turn LEDs off
+        def off():
             self._direction_leds.off()
             if self.motor:
                 self.motor.off()
-
-            if i != times-1:
-                time.sleep(pause_secs)
+        self._blink(on, off, times=2, on_secs=0.2, off_secs=0.2)
