@@ -105,7 +105,7 @@ class DigitDisplay(LedIndicator):
         else:
             self._display.show("    ")
 
-    def show(self, output):
+    def show(self, output: str) -> None:
         assert len(output) == 4, "output must be 4 characters"
         self._display.show(output)
 

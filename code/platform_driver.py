@@ -2,7 +2,7 @@ import logging
 import time
 
 from enum import Enum
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable, no_type_check, Optional, Union
 
 from gpiozero import Button, TonalBuzzer
 
@@ -133,7 +133,7 @@ class PlatformDriver(Component):
         if self._position_display:
             self._position_display.output_number(self.position)
 
-    def _voltage_low(self, status):
+    def _voltage_low(self, status: Status) -> bool:
         """Returns whether the motor voltage is too low to actuate."""
         return status.motor_voltage is not None and status.motor_voltage < MOTOR_VOLTAGE_CUTOFF
 
@@ -184,6 +184,7 @@ class PlatformDriver(Component):
             if i != times-1:
                 time.sleep(off_secs)
 
+    @no_type_check
     def output_error(self, output: str, times: int = 1,
             on_secs: float = 1, off_secs: float = 0.5) -> None:
         assert self._position_display and self.buzzer, \
@@ -196,13 +197,14 @@ class PlatformDriver(Component):
             self.buzzer.stop()
         self._blink(on, off, times=1, on_secs=1, off_secs=0.5)
 
+    @no_type_check
     def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
         assert self._direction_leds, "LEDs must be configured"
-        def on():
+        def on() -> None:
             self._direction_leds.on()
             if self.motor:
                 self.motor.all_on()
-        def off():
+        def off() -> None:
             self._direction_leds.off()
             if self.motor:
                 self.motor.off()
