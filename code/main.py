@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import board
 import logging
 import RPi.GPIO as GPIO
 import sys
@@ -109,10 +110,10 @@ if __name__ == '__main__':
             inner_button=Button(16),
             direction_leds=DirectionalLeds(outer_led_pin=20, inner_led_pin=12),
             voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
-            buzzer=TonalBuzzer(24),
+            buzzer=TonalBuzzer(18),
             outputs=[
                 LightCsvLogger("data/car_sensor_log.csv"),
-                LedBarGraphs(data_pin=25, latch_pin=8, clock_pin=7, min_level=500, max_level=30000),
+                LedBarGraphs(data_pin=23, latch_pin=24, clock_pin=25, min_level=500, max_level=30000),
                 LuxDiffDisplay(clock_pin=6, data_pin=13),
                 PositionDisplay(clock_pin=19, data_pin=26),
                 StatusPrinter(print_interval=MAIN_LOOP_SLEEP_SECS),
