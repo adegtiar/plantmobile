@@ -1,5 +1,5 @@
-import adafruit_tsl2561 # type: ignore
-import adafruit_tca9548a # type: ignore
+import adafruit_tsl2561  # type: ignore
+import adafruit_tca9548a  # type: ignore
 import board
 import busio
 import logging
@@ -17,7 +17,7 @@ class LightSensor(Input):
     # This is the i2c multiplexer used for the light sensors (to deal with address conflict).
     _mux = None
 
-    def __init__(self, outer_pin: int, inner_pin: int, name: str="<default>") -> None:
+    def __init__(self, outer_pin: int, inner_pin: int, name: str = "<default>") -> None:
         self.name = name
         self.outer_pin = outer_pin
         self.inner_pin = inner_pin

@@ -5,16 +5,13 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.animation as animation
-import numpy as np
 
 from matplotlib import style
 from datetime import datetime
 
 LAST_N_POINTS = 500
 
-style.use('seaborn-whitegrid')
-fig = plt.figure(num='Luminosity of Outer & Inner Sensors', figsize=[13,3])
-ax1 = fig.add_subplot(1,1,1)
+
 def animate(i: int) -> None:
     ftemp = 'data/sensor_log.csv'
     fh = open(ftemp)
@@ -45,9 +42,10 @@ def animate(i: int) -> None:
     plt.xlabel('Time')
     plt.ylabel('Lux')
 
-ani = animation.FuncAnimation(fig, animate, interval = 6000)
-plt.show()
 
-# outer: 3872, inner: 8388
-#outer sensor:    3497
-#inner sensor:    5805
+if __name__ == '__main__':
+    style.use('seaborn-whitegrid')
+    fig = plt.figure(num='Luminosity of Outer & Inner Sensors', figsize=[13, 3])
+    ax1 = fig.add_subplot(1, 1, 1)
+    ani = animation.FuncAnimation(fig, animate, interval=6000)
+    plt.show()

@@ -3,11 +3,10 @@
 import RPi.GPIO as GPIO
 import time
 
-from enum import Enum
 from typing import NoReturn
 
 from gpiozero import LED, Button
-from RpiMotorLib import RpiMotorLib # type: ignore
+from RpiMotorLib import RpiMotorLib  # type: ignore
 
 from common import Component, Rotation
 
@@ -83,15 +82,15 @@ def control_loop(
             motor.off()
 
 
-if __name__ == '__main__':     # Program entrance
+if __name__ == '__main__':
     print('Program is starting...')
     print('BLUE button towards outer, RED towards inner')
-    GPIO.setmode(GPIO.BCM)       # use BCM GPIO Numbering
-    MOTOR = StepperMotor(27, 22, 10, 9)    # define pins connected to four phase ABCD of stepper motor
+    GPIO.setmode(GPIO.BCM)
+    MOTOR = StepperMotor(27, 22, 10, 9)
     MOTOR.setup()
 
     try:
-       control_loop(
+        control_loop(
                motor=MOTOR, blue_button=Button(21), blue_led=LED(20),
                red_button=Button(16), red_led=LED(12))
     except KeyboardInterrupt:  # Press ctrl-c to end the program.

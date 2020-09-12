@@ -2,19 +2,20 @@
 
 import itertools
 import logging
-import RPi.GPIO as GPIO
 import time
 from typing import NoReturn
 
 from adafruit_hcsr04 import HCSR04  # type: ignore
 import board
+import RPi.GPIO as GPIO
 
 from common import Component
 
 
 class DistanceSensor(Component):
 
-    def __init__(self, trig_pin: int, echo_pin: int, threshold_cm: int=10, timeout: float=0.05) -> None:
+    def __init__(self, trig_pin: int, echo_pin: int,
+                 threshold_cm: int = 10, timeout: float = 0.05) -> None:
         self.trig_pin = board.pin.Pin(trig_pin)
         self.echo_pin = board.pin.Pin(echo_pin)
         self.threshold_cm = threshold_cm
@@ -67,12 +68,12 @@ def loop(sensor: DistanceSensor) -> NoReturn:
     assert False, "Not reached"
 
 
-if __name__ == '__main__':     # Program entrance
-    print ('Program is starting...')
+if __name__ == '__main__':
+    print('Program is starting...')
     sensor = DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10)
 
     try:
         loop(sensor)
-    except KeyboardInterrupt:  # Press ctrl-c to end the program.
-        #GPIO.cleanup()         # release GPIO resource
+    except KeyboardInterrupt:
+        GPIO.cleanup()
         sensor.off()

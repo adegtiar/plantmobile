@@ -5,13 +5,14 @@ import busio
 import sys
 
 from adafruit_ads1x15.ads1115 import ADS1115, Mode  # type: ignore
-from adafruit_ads1x15.analog_in import AnalogIn # type: ignore
+from adafruit_ads1x15.analog_in import AnalogIn  # type: ignore
 
 from common import Input
 
+
 class VoltageReader(Input):
     """A voltage reader which uses the ADS1115 ADC.
-    
+
     Resistor values can be specified to calculate the source voltage
     assuming you have a voltage divider set up of Vs~r1~ADC~r2~GND.
     """
@@ -41,6 +42,7 @@ class VoltageReader(Input):
     def read(self) -> float:
         assert self._chan, "Must call setup before reading"
         return self._chan.voltage * self._voltage_multipler
+
 
 if __name__ == '__main__':
     voltage_reader = VoltageReader(r1=100, r2=100)

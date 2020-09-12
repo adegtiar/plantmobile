@@ -1,8 +1,7 @@
 import logging
 import time
 
-from enum import Enum
-from typing import Any, Callable, Iterable, no_type_check, Optional, Union
+from typing import Callable, Iterable, no_type_check, Optional
 
 from gpiozero import Button, TonalBuzzer
 
@@ -22,17 +21,16 @@ class PlatformDriver(Component):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
     def __init__(self,
-            name: str,
-            light_sensors: LightSensor,
-            motor: Optional[StepperMotor] = None,
-            distance_sensor: Optional[DistanceSensor] = None,
-            direction_leds: Optional[DirectionalLeds] = None,
-            outer_button: Optional[Button] = None,
-            inner_button: Optional[Button] = None,
-            outputs: Iterable[Output] = (),
-            voltage_reader: Optional[VoltageReader] = None,
-            buzzer: Optional[TonalBuzzer] = None,
-        ) -> None:
+                 name: str,
+                 light_sensors: LightSensor,
+                 motor: Optional[StepperMotor] = None,
+                 distance_sensor: Optional[DistanceSensor] = None,
+                 direction_leds: Optional[DirectionalLeds] = None,
+                 outer_button: Optional[Button] = None,
+                 inner_button: Optional[Button] = None,
+                 outputs: Iterable[Output] = (),
+                 voltage_reader: Optional[VoltageReader] = None,
+                 buzzer: Optional[TonalBuzzer] = None) -> None:
         self.name = name
         self.light_sensors = light_sensors
         self.motor = motor
@@ -127,7 +125,7 @@ class PlatformDriver(Component):
             logging.info("Initializing edge position to {}".format(Region.OUTER_EDGE))
         elif self.position != Region.OUTER_EDGE.value:
             log = logging.info if abs(self.position) < 10 else logging.warning
-            log("Resetting outer edge position (drift: {})".format( self.position))
+            log("Resetting outer edge position (drift: {})".format(self.position))
         self.position = Region.OUTER_EDGE.value
 
         if self._position_display:
@@ -138,7 +136,7 @@ class PlatformDriver(Component):
         return status.motor_voltage is not None and status.motor_voltage < MOTOR_VOLTAGE_CUTOFF
 
     def move_direction(self,
-            direction: Direction, stop_requested: Callable[[Status], bool]) -> None:
+                       direction: Direction, stop_requested: Callable[[Status], bool]) -> None:
         assert self.motor, "motor must be configured"
 
         logging.info("starting sequence move towards %s", direction)
@@ -176,7 +174,7 @@ class PlatformDriver(Component):
         assert False, "should terminate within the loop"
 
     def _blink(self, on: Callable, off: Callable,
-            times: int, on_secs: float, off_secs: float) -> None:
+               times: int, on_secs: float, off_secs: float) -> None:
         for i in range(times):
             on()
             time.sleep(on_secs)
@@ -186,12 +184,14 @@ class PlatformDriver(Component):
 
     @no_type_check
     def output_error(self, output: str, times: int = 1,
-            on_secs: float = 1, off_secs: float = 0.5) -> None:
+                     on_secs: float = 1, off_secs: float = 0.5) -> None:
         assert self._position_display and self.buzzer, \
                 "position display and buzzer must be configured"
+
         def on():
             self._position_display.show(output)
             self.buzzer.play(ERROR_TONE_HZ)
+
         def off():
             self._position_display.off()
             self.buzzer.stop()
@@ -200,10 +200,12 @@ class PlatformDriver(Component):
     @no_type_check
     def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
         assert self._direction_leds, "LEDs must be configured"
+
         def on() -> None:
             self._direction_leds.on()
             if self.motor:
                 self.motor.all_on()
+
         def off() -> None:
             self._direction_leds.off()
             if self.motor:

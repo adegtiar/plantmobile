@@ -14,6 +14,7 @@ from common import Output, Status
 
 DIFF_PERCENT_CUTOFF = 30
 
+
 class LedIndicator(Output):
     # The minimum average lux at which it will output anything.
     # Used to keep the light off at night.
@@ -78,10 +79,10 @@ class DirectionalLeds(LedIndicator):
 class DigitDisplay(LedIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin: int, data_pin: int, brightness: int=3) -> None:
-        self._display=tm1637.TM1637(clk=clock_pin, dio=data_pin)
-        # The brightness of the display, from 0-7
-        self.brightness=brightness
+    def __init__(self, clock_pin: int, data_pin: int, brightness: int = 3) -> None:
+        self._display = tm1637.TM1637(clk=clock_pin, dio=data_pin)
+        # The brightness of the display, from 0-7.
+        self.brightness = brightness
 
     def setup(self) -> None:
         self._display.brightness(self.brightness)
@@ -132,8 +133,8 @@ class LedBarGraphs(LedIndicator):
     A level >= max_level will light all leds.
     """
 
-    def __init__(self, data_pin: int, latch_pin: int, clock_pin: int,
-            min_level: int=0, num_leds: int=8, max_level: int=8, num_graphs: int=2) -> None:
+    def __init__(self, data_pin: int, latch_pin: int, clock_pin: int, min_level: int = 0,
+                 num_leds: int = 8, max_level: int = 8, num_graphs: int = 2) -> None:
         self.data_pin = data_pin
         self.latch_pin = latch_pin
         self.clock_pin = clock_pin
@@ -146,7 +147,7 @@ class LedBarGraphs(LedIndicator):
 
     def setup(self) -> None:
         logging.info(
-                "initializing {} graphs with {} leds, min {}, max {}, and {:.2f} levels per led".format(
+                "init {} graphs with {} leds, min {}, max {}, and {:.2f} levels per led".format(
                     self.num_graphs, self.num_leds, self.min_level,
                     self.max_level, self.levels_per_led))
 
@@ -165,10 +166,14 @@ class LedBarGraphs(LedIndicator):
         # Keep all leds on up to and not including the level.
         output_bits = [0]*(self.num_leds - led_level) + [1]*led_level
         for led_on in output_bits:
-            GPIO.output(self.clock_pin, GPIO.LOW)   # Prepare shift register for input.
-            GPIO.output(self.data_pin, GPIO.HIGH if led_on else GPIO.LOW) # Led bit sent on data wire.
-            GPIO.output(self.clock_pin, GPIO.HIGH)  # Set led bit and shift to next register.
-        GPIO.output(self.clock_pin, GPIO.LOW)       # Keep clock pin low.
+            # Prepare shift register for input.
+            GPIO.output(self.clock_pin, GPIO.LOW)
+            # Led bit sent on data wire.
+            GPIO.output(self.data_pin, GPIO.HIGH if led_on else GPIO.LOW)
+            # Set led bit and shift to next register.
+            GPIO.output(self.clock_pin, GPIO.HIGH)
+        # Keep clock pin low.
+        GPIO.output(self.clock_pin, GPIO.LOW)
 
     def _get_leds_for_level(self, level: int) -> int:
         # Scale the level range to the led range.
@@ -183,7 +188,8 @@ class LedBarGraphs(LedIndicator):
         GPIO.output(self.latch_pin, GPIO.LOW)   # Prepare the shift registers for input
         for i, level in enumerate(levels):
             led_level = self._get_leds_for_level(level)
-            logging.debug("setting output of Graph {} to level {} ({} leds)".format(i, level, led_level))
+            logging.debug(
+                    "setting output of Graph {} to level {} ({} leds)".format(i, level, led_level))
             self._set_leds(led_level)
         logging.debug("latching output to update graphs")
         GPIO.output(self.latch_pin, GPIO.HIGH)  # Latch the output to the latest register values.
@@ -197,11 +203,11 @@ class LedBarGraphs(LedIndicator):
         self.set_levels(status.lux.inner, status.lux.outer)
 
 
-if __name__ == '__main__': # Program entrance
+if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     logging.info('Running test program for led graphs...')
     try:
-        max_level=16
+        max_level = 16
         graphs = LedBarGraphs(
                 data_pin=26, latch_pin=19, clock_pin=13, min_level=8, max_level=max_level)
         graphs.setup()

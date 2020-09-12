@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO)
 
 MAIN_LOOP_SLEEP_SECS = 0.5
 
+
 def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
     # Use BCM GPIO numbering.
     GPIO.setmode(GPIO.BCM)
@@ -45,7 +46,7 @@ def cleanup(platforms: Iterable[PlatformDriver]) -> None:
     for platform in platforms:
         platform.off()
     # GPIO cleanup not needed when also using gpiozero
-    #GPIO.cleanup()
+    # GPIO.cleanup()
 
 
 def stop_requester(manual_mode: bool, manual_hold_button: ButtonPress) -> Callable[[Status], bool]:
@@ -116,7 +117,6 @@ if __name__ == '__main__':
                 PositionDisplay(clock_pin=19, data_pin=26),
                 StatusPrinter(print_interval=MAIN_LOOP_SLEEP_SECS),
             ])
-
 
     DC_CAR = PlatformDriver(
             name="DC",
