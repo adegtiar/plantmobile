@@ -80,13 +80,20 @@ class AvoidShadowController(Controller):
 
     def perform_action(self, status: Status) -> bool:
         lux = status.lux
-        if self._enabled and abs(lux.diff_percent) >= self.diff_percent_cutoff:
+        if not self._enabled:
+            return False
+
+        if self.platform.get_region() is Region.UNKNOWN:
+            self._notify()
+            self.platform.move_direction(Direction.OUTER, self._should_continue)
+            return True
+        elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
             # TODO: stop on button press
             if lux.outer > lux.inner and status.region != Region.OUTER_EDGE:
                 self._notify()
                 self.platform.move_direction(Direction.OUTER, self._should_continue)
                 return True
-            elif lux.inner > lux.outer and status.region != Region.INNER_EDGE:
+            elif lux.inner > lux.outer and status.region in (Region.MID, Region.OUTER_EDGE):
                 self._notify()
                 self.platform.move_direction(Direction.INNER, self._should_continue)
                 return True

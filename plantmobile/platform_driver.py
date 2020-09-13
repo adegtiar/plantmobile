@@ -80,7 +80,12 @@ class PlatformDriver(Component):
             if at_outer_edge:
                 logging.info("At outer edge. Setting position to zero.")
                 self._reset_pos_to_outer_edge()
-        return Region.OUTER_EDGE if at_outer_edge else Region.MID
+        if at_outer_edge:
+            return Region.OUTER_EDGE
+        elif self.position is not None:
+            return Region.MID
+        else:
+            return Region.UNKNOWN
 
     def _reset_pos_to_outer_edge(self) -> None:
         """Reset the current internal position to be 0, i.e. the OUTER_EDGE."""

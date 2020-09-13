@@ -77,7 +77,7 @@ class StatusPrinter(Output):
         print("diff:\t\t", status.lux.diff)
         print("diff percent:\t {}%".format(status.lux.diff_percent))
         print("position:\t", status.position)
-        print("region:\t\t {}{}".format(status.region, "?" if status.position is None else ""))
+        print("region:\t\t",  status.region)
         print("motor voltage:\t {:.3f}".format(status.motor_voltage))
         print()
         self._last_printed_time = time.time()

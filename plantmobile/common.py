@@ -14,8 +14,9 @@ LuxReading = NamedTuple('LuxReading', [
 
 class Region(Enum):
     """Indicates the region of the table corresponding to the position."""
+    UNKNOWN = None
     OUTER_EDGE = 0
-    MID = None
+    MID = 50
     INNER_EDGE = 100
 
     @classmethod
