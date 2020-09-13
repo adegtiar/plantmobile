@@ -8,7 +8,7 @@ from typing import Iterable, List, NoReturn
 import board
 import RPi.GPIO as GPIO
 
-from plantmobile.controller import AvoidShadowController, ButtonController
+from plantmobile.controller import AvoidShadowController, ButtonController, Controller
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
 from plantmobile.output_device import (
@@ -46,12 +46,17 @@ def cleanup(platforms: Iterable[PlatformDriver]) -> None:
     # GPIO.cleanup()
 
 
-def control_loop(platform: PlatformDriver) -> NoReturn:
-    controllers = [
-            ButtonController(platform),
-            AvoidShadowController(platform, DIFF_PERCENT_CUTOFF),
-    ]
+def control_loop(platform: PlatformDriver, controllers: List[Controller]) -> NoReturn:
+    """Runs the control loop for a platform.
 
+    In each loop, the controllers will be run in order until one performs an action.
+
+    param platform:
+        The platform to drive.
+    param controllers:
+        The prioritized list of controllers.
+    
+    """
     while True:
         status = platform.get_status()
         platform.output_status(status)
@@ -89,19 +94,24 @@ if __name__ == '__main__':
                 StatusPrinter(print_interval=MAIN_LOOP_SLEEP_SECS),
             ])
 
-    DC_CAR = PlatformDriver(
-            name="DC",
-            light_sensors=LightSensor(outer_pin=1, inner_pin=0),
-            outputs=[
-                LightCsvLogger("data/base_sensor_log.csv"),
-            ])
+    CONTROLLERS = [
+            ButtonController(STEPPER_CAR),
+            AvoidShadowController(STEPPER_CAR, DIFF_PERCENT_CUTOFF),
+    ]
+
+    #DC_CAR = PlatformDriver(
+    #        name="DC",
+    #        light_sensors=LightSensor(outer_pin=1, inner_pin=0),
+    #        outputs=[
+    #            LightCsvLogger("data/base_sensor_log.csv"),
+    #        ])
 
     working_platforms = setup([STEPPER_CAR])
     if not working_platforms:
         print("No working platforms to run. Exiting.")
         sys.exit(1)
     try:
-        control_loop(working_platforms[0])
+        control_loop(working_platforms[0], CONTROLLERS)
     except KeyboardInterrupt:
         print("Stopping...")
     finally:

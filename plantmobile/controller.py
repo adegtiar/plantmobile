@@ -6,7 +6,7 @@ from plantmobile.output_device import Tune
 from plantmobile.platform_driver import PlatformDriver
 
 
-class MotorController(ABC):
+class Controller(ABC):
 
     @abstractmethod
     def perform_action(self, status: Status) -> bool:
@@ -17,7 +17,7 @@ class MotorController(ABC):
 AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5", "D5"], [1, 1, 1, 2, 2])
 
 
-class AvoidShadowController(MotorController):
+class AvoidShadowController(Controller):
     # TODO: bias towards outer
     # TODO: add smoothing
     # TODO: add rate-limiting
@@ -50,7 +50,7 @@ class AvoidShadowController(MotorController):
         return False
 
 
-class ButtonController(MotorController):
+class ButtonController(Controller):
 
     def __init__(self, platform: PlatformDriver):
         assert platform.motor, "Must have motor configured"
