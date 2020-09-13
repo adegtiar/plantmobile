@@ -72,7 +72,7 @@ class ButtonPress(Enum):
 
 Status = NamedTuple('Status', [
     ('name', str), ('lux', LuxReading), ('motor_voltage', Optional[float]),
-    ('button', ButtonPress), ('position', Optional[int]), ('region', Region)])
+    ('position', Optional[int]), ('region', Region)])
 
 
 class Component(ABC):

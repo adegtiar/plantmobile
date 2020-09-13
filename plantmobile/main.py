@@ -8,6 +8,7 @@ import board
 import RPi.GPIO as GPIO
 
 from plantmobile.controller import AvoidShadowController, ButtonController, control_loop
+from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
 from plantmobile.output_device import (
@@ -19,9 +20,10 @@ DIFF_PERCENT_CUTOFF = 30
 PRINT_INTERVAL_SECS = 0.5
 
 
-def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
+def setup(debug_panel: DebugPanel, platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
     # Use BCM GPIO numbering.
     GPIO.setmode(GPIO.BCM)
+    debug_panel.setup()
 
     # Initialize all platforms and return the ones that are failure-free.
     working_platforms = []
@@ -47,19 +49,13 @@ def cleanup(platforms: Iterable[PlatformDriver]) -> None:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    STEPPER_CAR = PlatformDriver(
-            name="Stepper",
-            light_sensors=LightSensor(outer_pin=2, inner_pin=3),
-            motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
-            distance_sensor=DistanceSensor(
-                trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10, timeout=0.05),
+    DEBUG_PANEL = DebugPanel(
             outer_button=Button(board.D21),
             inner_button=Button(board.D16),
-            direction_leds=DirectionalLeds(
-                DIFF_PERCENT_CUTOFF, outer_led_pin=board.D20, inner_led_pin=board.D12),
-            voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
             buzzer=TonalBuzzer(board.D18),
             outputs=[
+                DirectionalLeds(
+                    DIFF_PERCENT_CUTOFF, outer_led_pin=board.D20, inner_led_pin=board.D12),
                 LightCsvLogger("data/car_sensor_log.csv"),
                 LedBarGraphs(
                     data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
@@ -69,9 +65,18 @@ if __name__ == '__main__':
                 StatusPrinter(print_interval=PRINT_INTERVAL_SECS),
             ])
 
+    STEPPER_CAR = PlatformDriver(
+            name="Stepper",
+            light_sensors=LightSensor(outer_pin=2, inner_pin=3),
+            motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
+            distance_sensor=DistanceSensor(
+                trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10, timeout=0.05),
+            voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
+    )
+
     CONTROLLERS = [
-            ButtonController(STEPPER_CAR),
-            AvoidShadowController(STEPPER_CAR, DIFF_PERCENT_CUTOFF),
+            ButtonController(STEPPER_CAR, DEBUG_PANEL),
+            AvoidShadowController(STEPPER_CAR, DEBUG_PANEL, DIFF_PERCENT_CUTOFF),
     ]
 
     # DC_CAR = PlatformDriver(
@@ -81,12 +86,12 @@ if __name__ == '__main__':
     #             LightCsvLogger("data/base_sensor_log.csv"),
     #         ])
 
-    working_platforms = setup([STEPPER_CAR])
+    working_platforms = setup(DEBUG_PANEL, [STEPPER_CAR])
     if not working_platforms:
         print("No working platforms to run. Exiting.")
         sys.exit(1)
     try:
-        control_loop(working_platforms[0], CONTROLLERS)
+        control_loop(working_platforms[0], DEBUG_PANEL, CONTROLLERS)
     except KeyboardInterrupt:
         print("Stopping...")
     finally:

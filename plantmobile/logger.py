@@ -76,7 +76,6 @@ class StatusPrinter(Output):
         print("average_lux:\t", status.lux.avg)
         print("diff:\t\t", status.lux.diff)
         print("diff percent:\t {}%".format(status.lux.diff_percent))
-        print("button_status:\t", status.button.name)
         print("position:\t", status.position)
         print("region:\t\t {}{}".format(status.region, "?" if status.position is None else ""))
         print("motor voltage:\t {:.3f}".format(status.motor_voltage))
