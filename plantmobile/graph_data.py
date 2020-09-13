@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# Script to read data from the CSV and display it in a graph:
+# Script to read data from the CSV and display it in a graph.
+# Must be run from within an X window.
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
