@@ -2,9 +2,9 @@ import logging
 import time
 from typing import Callable, Iterable, no_type_check, Optional
 
-from common import ButtonPress, Component, Direction, Region, Output, Status
-from input_device import Button, DistanceSensor, LightSensor, VoltageReader
-from output_device import TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor
+from plantmobile.common import ButtonPress, Component, Direction, Region, Output, Status
+from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
+from plantmobile.output_device import TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor
 
 STEPS_PER_MOVE = 7
 MOTOR_VOLTAGE_CUTOFF = 4.0

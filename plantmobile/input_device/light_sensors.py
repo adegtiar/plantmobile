@@ -7,7 +7,7 @@ from adafruit_tsl2561 import TSL2561  # type: ignore
 from adafruit_tca9548a import TCA9548A  # type: ignore
 from numpy import mean
 
-from common import Input, LuxReading
+from plantmobile.common import Input, LuxReading
 
 
 class LightSensor(Input):

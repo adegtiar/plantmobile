@@ -7,7 +7,7 @@ import busio
 from adafruit_ads1x15.ads1115 import ADS1115, Mode  # type: ignore
 from adafruit_ads1x15.analog_in import AnalogIn  # type: ignore
 
-from common import Input
+from plantmobile.common import Input
 
 
 class VoltageReader(Input):

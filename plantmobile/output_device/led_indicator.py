@@ -6,18 +6,13 @@ import logging
 import time
 
 import board
-import gpiozero
 import RPi.GPIO as GPIO
 import tm1637   # type: ignore
 
-from common import Output, Pin, Status
+from .gpiozero import LED
+from plantmobile.common import Output, Pin, Status
 
 DIFF_PERCENT_CUTOFF = 30
-
-
-class LED(gpiozero.LED):
-    def __init__(self, pin: Pin) -> None:
-        super(LED, self).__init__(pin.id)
 
 
 class LedIndicator(Output):

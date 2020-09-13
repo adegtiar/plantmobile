@@ -7,9 +7,9 @@ import RPi.GPIO as GPIO
 import board
 from RpiMotorLib import RpiMotorLib  # type: ignore
 
-from common import Component, Pin, Rotation
-from input_device import Button
-from led_outputs import LED
+from plantmobile.common import Component, Pin, Rotation
+from plantmobile.input_device import Button
+from plantmobile.output_device import LED
 
 PAUSE_SECS = 0.001
 STEP_TYPE = "half"

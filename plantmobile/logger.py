@@ -2,7 +2,7 @@ import numpy as np
 import time
 from typing import IO, List, Optional
 
-from common import LuxReading, Output, Status
+from plantmobile.common import LuxReading, Output, Status
 
 
 class LightCsvLogger(Output):

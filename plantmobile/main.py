@@ -8,13 +8,13 @@ from typing import Callable, Iterable, List, NoReturn
 import board
 import RPi.GPIO as GPIO
 
-from common import ButtonPress, Direction, Status
-from logger import LightCsvLogger, StatusPrinter
-from input_device import Button, DistanceSensor, LightSensor, VoltageReader
-from output_device import (
+from plantmobile.common import ButtonPress, Direction, Status
+from plantmobile.logger import LightCsvLogger, StatusPrinter
+from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
+from plantmobile.output_device import (
         TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor, LedBarGraphs, LuxDiffDisplay
 )
-from platform_driver import PlatformDriver
+from .platform_driver import PlatformDriver
 
 logging.basicConfig(level=logging.INFO)
 

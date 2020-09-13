@@ -9,7 +9,7 @@ import board
 import RPi.GPIO as GPIO
 from adafruit_hcsr04 import HCSR04  # type: ignore
 
-from common import Component, Pin
+from plantmobile.common import Component, Pin
 
 
 class DistanceSensor(Component):
