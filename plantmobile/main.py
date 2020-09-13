@@ -3,12 +3,12 @@
 import logging
 import sys
 import time
-from typing import Callable, Iterable, List, NoReturn
+from typing import Iterable, List, NoReturn
 
 import board
 import RPi.GPIO as GPIO
 
-from plantmobile.common import ButtonPress, Direction, Status
+from plantmobile.controller import ButtonController
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
 from plantmobile.output_device import (
@@ -45,50 +45,14 @@ def cleanup(platforms: Iterable[PlatformDriver]) -> None:
     # GPIO.cleanup()
 
 
-def stop_requester(manual_mode: bool, manual_hold_button: ButtonPress) -> Callable[[Status], bool]:
-    def stop_requested(status: Status) -> bool:
-        if manual_mode:
-            # Keep moving while the button is held down.
-            return not (status.button is manual_hold_button)
-        else:
-            # Keep moving unless any button is pressed to cancel it.
-            return not (status.button is ButtonPress.NONE)
-    return stop_requested
-
-
 def control_loop(platform: PlatformDriver) -> NoReturn:
-    manual_mode = True
+    controller = ButtonController(platform)
 
     while True:
         status = platform.get_status()
         platform.output_status(status)
-
-        # Enable manual button->motor control.
-        if platform.motor:
-            if status.button is ButtonPress.OUTER:
-                if not manual_mode:
-                    platform.blink(times=2)
-                platform.move_direction(
-                        Direction.OUTER,
-                        stop_requester(manual_mode, ButtonPress.OUTER))
-            elif status.button is ButtonPress.INNER:
-                if not manual_mode:
-                    platform.blink(times=2)
-                platform.move_direction(
-                        Direction.INNER,
-                        stop_requester(manual_mode, ButtonPress.INNER))
-            elif status.button is ButtonPress.BOTH:
-                # Toggle between manual mode and auto mode.
-                platform.blink(times=3)
-                manual_mode = not manual_mode
-                if not manual_mode:
-                    platform.move_direction(
-                            Direction.OUTER,
-                            stop_requested=lambda s: not (s.button is ButtonPress.NONE))
-            elif status.button is ButtonPress.NONE:
-                platform.motor.off()
-            else:
-                assert False, "unknown button press {}".format(status.button)
+        # TODO: refactor in terms of steps/changes?
+        controller.perform_action(status)
 
         # TODO: do something with the luxes.
 
