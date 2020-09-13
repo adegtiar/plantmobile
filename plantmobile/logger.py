@@ -70,15 +70,15 @@ class StatusPrinter(Output):
         if time.time() - self._last_printed_time < self.print_interval:
             return
 
-        print("name:\t\t", status.lux.name)
-        print("outer:\t\t", status.lux.outer)
-        print("inner:\t\t", status.lux.inner)
-        print("average:\t", status.lux.avg)
+        print("name:\t\t", status.name)
+        print("outer_lux:\t", status.lux.outer)
+        print("inner_lux:\t", status.lux.inner)
+        print("average_lux:\t", status.lux.avg)
         print("diff:\t\t", status.lux.diff)
         print("diff percent:\t {}%".format(status.lux.diff_percent))
         print("button_status:\t", status.button.name)
         print("position:\t", status.position)
-        print("region:\t\t", status.region)
+        print("region:\t\t {}{}".format(status.region, "?" if status.position is None else ""))
         print("motor voltage:\t {:.3f}".format(status.motor_voltage))
         print()
         self._last_printed_time = time.time()

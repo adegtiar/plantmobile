@@ -14,6 +14,7 @@ MOTOR_VOLTAGE_CUTOFF = 4.0
 ERROR_TONE_HZ = 220
 
 
+# TODO: separate plant car and debug panel.
 class PlatformDriver(Component):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
@@ -56,7 +57,6 @@ class PlatformDriver(Component):
         should trigger here.
         """
         # Set up the light sensors for reading.
-        self.light_sensors.name = self.name
         self.light_sensors.setup()
         if self.voltage_reader:
             self.voltage_reader.setup()
@@ -80,6 +80,7 @@ class PlatformDriver(Component):
         force_edge_check: whether to check the distance sensor to verify the edge position.
         """
         return Status(
+                name=self.name,
                 lux=self.light_sensors.read(),
                 motor_voltage=self.voltage_reader.read() if self.voltage_reader else None,
                 button=self.get_button_pressed(),

@@ -58,6 +58,9 @@ class AvoidShadowController(Controller):
         self.diff_percent_cutoff = diff_percent_cutoff
         self._enabled = True
 
+    def toggle_enabled(self) -> None:
+        self._enabled = not self._enabled
+
     def _notify(self) -> None:
         if self.platform.buzzer:
             self.platform.buzzer.play_tune(AUTO_MOVE_TUNE)
@@ -66,7 +69,7 @@ class AvoidShadowController(Controller):
 
     def perform_action(self, status: Status) -> bool:
         lux = status.lux
-        if abs(lux.diff_percent) >= self.diff_percent_cutoff:
+        if self._enabled and abs(lux.diff_percent) >= self.diff_percent_cutoff:
             # TODO: stop on button press
             if lux.outer > lux.inner and status.region != Region.OUTER_EDGE:
                 self._notify()

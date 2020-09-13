@@ -19,17 +19,14 @@ class LightSensor(Input):
     # This is the i2c multiplexer used for the light sensors (to deal with address conflict).
     _mux = None
 
-    def __init__(self, outer_pin: int, inner_pin: int, name: str = "<default>") -> None:
+    def __init__(self, outer_pin: int, inner_pin: int) -> None:
         """
         param outer_pin:
             The outer sensor pin on the i2c mux
         param inner_pin:
             The inner sense pin on the i2c mux
-        param name:
-            The name used in logging.
         """
         assert all(0 <= pin <= 7 for pin in (outer_pin, inner_pin)), "mux pin must be 0-7."
-        self.name = name
         self.outer_pin = outer_pin
         self.inner_pin = inner_pin
         self._outer_tsl = None
@@ -40,8 +37,8 @@ class LightSensor(Input):
         # May throw a ValueError if it's not connected.
         if self._outer_tsl is None:
             assert self._inner_tsl is None, "partially initialized state"
-            logging.info("Initializing {} light sensors with mux pins Outer: {}, Inner: {}".format(
-                self.name, self.outer_pin, self.inner_pin))
+            logging.info("Initializing light sensors with mux pins Outer: {}, Inner: {}".format(
+                self.outer_pin, self.inner_pin))
             self._outer_tsl = TSL2561(LightSensor.get_mux()[self.outer_pin])
             self._inner_tsl = TSL2561(LightSensor.get_mux()[self.inner_pin])
 
@@ -69,4 +66,4 @@ class LightSensor(Input):
         avg = int(mean((outer, inner)))
         diff = inner - outer
         diff_percent = int(diff/avg * 100) if avg else 0
-        return LuxReading(outer, inner, avg, diff, diff_percent, timestamp, self.name)
+        return LuxReading(outer, inner, avg, diff, diff_percent, timestamp)

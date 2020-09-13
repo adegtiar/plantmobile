@@ -8,7 +8,7 @@ from adafruit_blinka.microcontroller.bcm283x.pin import Pin  # type: ignore # no
 # A reading of light sensor data.
 LuxReading = NamedTuple('LuxReading', [
     ('outer', int), ('inner', int), ('avg', int), ('diff', int),
-    ('diff_percent', int), ('timestamp', datetime), ('name', str),
+    ('diff_percent', int), ('timestamp', datetime),
 ])
 
 
@@ -71,7 +71,7 @@ class ButtonPress(Enum):
 
 
 Status = NamedTuple('Status', [
-    ('lux', LuxReading), ('motor_voltage', Optional[float]),
+    ('name', str), ('lux', LuxReading), ('motor_voltage', Optional[float]),
     ('button', ButtonPress), ('position', Optional[int]), ('region', Region)])
 
 
