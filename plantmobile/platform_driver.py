@@ -6,8 +6,11 @@ from plantmobile.common import ButtonPress, Component, Direction, Region, Output
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
 from plantmobile.output_device import TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor
 
+# Number of steps in a single movement unit between sensor checks.
 STEPS_PER_MOVE = 7
+# A voltage reading below this will abort motor movement and display an error.
 MOTOR_VOLTAGE_CUTOFF = 4.0
+# The tone to buzz on motor error.
 ERROR_TONE_HZ = 220
 
 

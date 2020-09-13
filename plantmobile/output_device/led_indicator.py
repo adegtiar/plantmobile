@@ -6,11 +6,16 @@ import logging
 import time
 
 import board
+import gpiozero
 import RPi.GPIO as GPIO
 import tm1637   # type: ignore
 
-from .gpiozero import LED
 from plantmobile.common import Output, Pin, Status
+
+
+class LED(gpiozero.LED):
+    def __init__(self, pin: Pin) -> None:
+        super(LED, self).__init__(pin.id)
 
 
 class LedIndicator(Output):

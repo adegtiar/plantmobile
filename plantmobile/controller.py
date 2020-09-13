@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
-from plantmobile.common import ButtonPress, Direction, Status
+from plantmobile.common import ButtonPress, Direction, Region, Status
+from plantmobile.output_device import Tune
 from plantmobile.platform_driver import PlatformDriver
 
 
@@ -12,7 +13,12 @@ class MotorController(ABC):
         pass
 
 
+# Tune for "Here Comes the Sun" by The Beatles.
+AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5", "D5"], [1, 1, 1, 2, 2])
+
+
 class AvoidShadowController(MotorController):
+    # TODO: bias towards outer
     # TODO: add smoothing
     # TODO: add rate-limiting
 
@@ -23,17 +29,24 @@ class AvoidShadowController(MotorController):
         self.diff_percent_cutoff = diff_percent_cutoff
         self._enabled = True
 
+    def _notify(self) -> None:
+        if self.platform.buzzer:
+            self.platform.buzzer.play_tune(AUTO_MOVE_TUNE)
+        else:
+            self.platform.blink(times=2)
+
     def perform_action(self, status: Status) -> bool:
         lux = status.lux
         if abs(lux.diff_percent) >= self.diff_percent_cutoff:
-            # TODO: add buzzer notification
-            self.platform.blink(times=2)
             # TODO: stop on button press
-            if lux.outer > lux.inner:
+            if lux.outer > lux.inner and status.region != Region.OUTER_EDGE:
+                self._notify()
                 self.platform.move_direction(Direction.OUTER, lambda _: False)
-            else:
+                return True
+            elif lux.inner > lux.outer and status.region != Region.INNER_EDGE:
+                self._notify()
                 self.platform.move_direction(Direction.INNER, lambda _: False)
-            return True
+                return True
         return False
 
 

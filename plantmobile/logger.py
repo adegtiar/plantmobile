@@ -70,7 +70,7 @@ class StatusPrinter(Output):
         if time.time() - self._last_printed_time < self.print_interval:
             return
 
-        print("sensor:\t\t", status.lux.name)
+        print("name:\t\t", status.lux.name)
         print("outer:\t\t", status.lux.outer)
         print("inner:\t\t", status.lux.inner)
         print("average:\t", status.lux.avg)
