@@ -16,9 +16,6 @@ from plantmobile.output_device import (
 )
 from plantmobile.platform_driver import PlatformDriver
 
-logging.basicConfig(level=logging.INFO)
-
-
 MAIN_LOOP_SLEEP_SECS = 0.5
 
 
@@ -99,6 +96,7 @@ def control_loop(platform: PlatformDriver) -> NoReturn:
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
             light_sensors=LightSensor(outer_pin=2, inner_pin=3),
