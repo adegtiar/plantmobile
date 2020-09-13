@@ -52,7 +52,6 @@ class ButtonController(MotorController):
                 self.platform.move_direction(Direction.OUTER, self._stop_requester(None))
             return True
         elif status.button is ButtonPress.NONE:
-            self.platform.motor.off()
             return False
         else:
             assert False, "unknown button press {}".format(status.button)

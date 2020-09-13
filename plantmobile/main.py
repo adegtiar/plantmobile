@@ -46,13 +46,17 @@ def cleanup(platforms: Iterable[PlatformDriver]) -> None:
 
 
 def control_loop(platform: PlatformDriver) -> NoReturn:
-    controller = ButtonController(platform)
+    controllers = [ButtonController(platform)]
 
     while True:
         status = platform.get_status()
         platform.output_status(status)
         # TODO: refactor in terms of steps/changes?
-        controller.perform_action(status)
+
+        for controller in controllers:
+            if controller.perform_action(status):
+                logging.debug("Performed action from %s", controller)
+                break
 
         # TODO: do something with the luxes.
 
