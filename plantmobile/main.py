@@ -14,7 +14,7 @@ from plantmobile.input_device import Button, DistanceSensor, LightSensor, Voltag
 from plantmobile.output_device import (
         TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor, LedBarGraphs, LuxDiffDisplay
 )
-from .platform_driver import PlatformDriver
+from plantmobile.platform_driver import PlatformDriver
 
 logging.basicConfig(level=logging.INFO)
 
