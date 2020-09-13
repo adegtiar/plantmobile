@@ -1,9 +1,13 @@
+import logging
+import time
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from typing import Callable, List, NoReturn, Optional
 
 from plantmobile.common import ButtonPress, Direction, Region, Status
 from plantmobile.output_device import Tune
 from plantmobile.platform_driver import PlatformDriver
+
+CONTROL_LOOP_SLEEP_SECS = 0.5
 
 
 class Controller(ABC):
@@ -11,6 +15,29 @@ class Controller(ABC):
     @abstractmethod
     def perform_action(self, status: Status) -> bool:
         pass
+
+
+def control_loop(platform: PlatformDriver, controllers: List[Controller]) -> NoReturn:
+    """Runs the control loop for a platform.
+
+    In each loop, the controllers will be run in order until one performs an action.
+
+    param platform:
+        The platform to drive.
+    param controllers:
+        The prioritized list of controllers.
+    """
+    while True:
+        status = platform.get_status()
+        platform.output_status(status)
+        # TODO: refactor in terms of steps/changes?
+
+        for controller in controllers:
+            if controller.perform_action(status):
+                logging.debug("Performed action from %s", controller)
+                break
+
+        time.sleep(CONTROL_LOOP_SLEEP_SECS)
 
 
 # Tune for "Here Comes the Sun" by The Beatles.
@@ -21,6 +48,8 @@ class AvoidShadowController(Controller):
     # TODO: bias towards outer
     # TODO: add smoothing
     # TODO: add rate-limiting
+    # TODO: add button enable/disable
+    # TODO: add battery keep-alive?
 
     def __init__(self, platform: PlatformDriver, diff_percent_cutoff: int):
         assert platform.motor, "Must have motor configured"
