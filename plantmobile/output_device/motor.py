@@ -9,7 +9,7 @@ from RpiMotorLib import RpiMotorLib  # type: ignore
 
 from plantmobile.common import Component, Pin, Rotation
 from plantmobile.input_device import Button
-from plantmobile.output_device import LED
+from .led_indicator import LED
 
 PAUSE_SECS = 0.001
 STEP_TYPE = "half"
@@ -86,6 +86,7 @@ def control_loop(
 
 
 if __name__ == '__main__':
+    # TODO: move this to a separate script
     print('Program is starting...')
     print('BLUE button towards outer, RED towards inner')
     GPIO.setmode(GPIO.BCM)
@@ -97,4 +98,5 @@ if __name__ == '__main__':
                motor=MOTOR, blue_button=Button(board.D21), blue_led=LED(board.D20),
                red_button=Button(board.D16), red_led=LED(board.D12))
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
-        pass
+        MOTOR.off()
+        # GPIO cleanup handled by gpiozero.

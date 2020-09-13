@@ -204,6 +204,7 @@ class LedBarGraphs(LedIndicator):
 
 
 if __name__ == '__main__':
+    # TODO: move this to a separate script
     logging.basicConfig(level=logging.DEBUG)
     logging.info('Running test program for led graphs...')
     try:

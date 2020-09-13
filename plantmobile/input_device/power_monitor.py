@@ -45,6 +45,7 @@ class VoltageReader(Input):
 
 
 if __name__ == '__main__':
+    # TODO: move this to a separate script
     voltage_reader = VoltageReader(r1=100, r2=100)
     voltage_reader.setup()
     print(voltage_reader.read())

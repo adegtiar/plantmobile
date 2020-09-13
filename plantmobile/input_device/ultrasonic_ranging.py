@@ -69,11 +69,13 @@ def loop(sensor: DistanceSensor) -> NoReturn:
 
 
 if __name__ == '__main__':
+    # TODO: move this to a separate script
     print('Program is starting...')
     sensor = DistanceSensor(trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10)
+    sensor.setup()
 
     try:
         loop(sensor)
     except KeyboardInterrupt:
-        GPIO.cleanup()
         sensor.off()
+        GPIO.cleanup()
