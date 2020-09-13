@@ -8,7 +8,7 @@ from typing import Iterable, List, NoReturn
 import board
 import RPi.GPIO as GPIO
 
-from plantmobile.controller import ButtonController
+from plantmobile.controller import AvoidShadowController, ButtonController
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
 from plantmobile.output_device import (
@@ -17,6 +17,7 @@ from plantmobile.output_device import (
 from plantmobile.platform_driver import PlatformDriver
 
 MAIN_LOOP_SLEEP_SECS = 0.5
+DIFF_PERCENT_CUTOFF = 30
 
 
 def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
@@ -46,7 +47,10 @@ def cleanup(platforms: Iterable[PlatformDriver]) -> None:
 
 
 def control_loop(platform: PlatformDriver) -> NoReturn:
-    controllers = [ButtonController(platform)]
+    controllers = [
+            ButtonController(platform),
+            AvoidShadowController(platform, DIFF_PERCENT_CUTOFF),
+    ]
 
     while True:
         status = platform.get_status()
@@ -57,8 +61,6 @@ def control_loop(platform: PlatformDriver) -> NoReturn:
             if controller.perform_action(status):
                 logging.debug("Performed action from %s", controller)
                 break
-
-        # TODO: do something with the luxes.
 
         time.sleep(MAIN_LOOP_SLEEP_SECS)
 
@@ -73,7 +75,8 @@ if __name__ == '__main__':
                 trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10, timeout=0.05),
             outer_button=Button(board.D21),
             inner_button=Button(board.D16),
-            direction_leds=DirectionalLeds(outer_led_pin=board.D20, inner_led_pin=board.D12),
+            direction_leds=DirectionalLeds(
+                DIFF_PERCENT_CUTOFF, outer_led_pin=board.D20, inner_led_pin=board.D12),
             voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
             buzzer=TonalBuzzer(board.D18),
             outputs=[

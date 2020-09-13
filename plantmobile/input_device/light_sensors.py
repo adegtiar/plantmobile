@@ -10,6 +10,9 @@ from numpy import mean
 from plantmobile.common import Input, LuxReading
 
 
+DIFF_PERCENT_CUTOFF = 30
+
+
 class LightSensor(Input):
     """Read lux data from an inner and outer sensor."""
 

@@ -12,6 +12,31 @@ class MotorController(ABC):
         pass
 
 
+class AvoidShadowController(MotorController):
+    # TODO: add smoothing
+    # TODO: add rate-limiting
+
+    def __init__(self, platform: PlatformDriver, diff_percent_cutoff: int):
+        assert platform.motor, "Must have motor configured"
+        assert platform.light_sensors, "Must have light sensors configured"
+        self.platform = platform
+        self.diff_percent_cutoff = diff_percent_cutoff
+        self._enabled = True
+
+    def perform_action(self, status: Status) -> bool:
+        lux = status.lux
+        if abs(lux.diff_percent) >= self.diff_percent_cutoff:
+            # TODO: add buzzer notification
+            self.platform.blink(times=2)
+            # TODO: stop on button press
+            if lux.outer > lux.inner:
+                self.platform.move_direction(Direction.OUTER, lambda _: False)
+            else:
+                self.platform.move_direction(Direction.INNER, lambda _: False)
+            return True
+        return False
+
+
 class ButtonController(MotorController):
 
     def __init__(self, platform: PlatformDriver):

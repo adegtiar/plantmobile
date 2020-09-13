@@ -12,8 +12,6 @@ import tm1637   # type: ignore
 from .gpiozero import LED
 from plantmobile.common import Output, Pin, Status
 
-DIFF_PERCENT_CUTOFF = 30
-
 
 class LedIndicator(Output):
     # The minimum average lux at which it will output anything.
@@ -33,9 +31,10 @@ class LedIndicator(Output):
 
 class DirectionalLeds(LedIndicator):
 
-    def __init__(self, outer_led_pin: Pin, inner_led_pin: Pin) -> None:
+    def __init__(self, diff_percent_cutoff: int, outer_led_pin: Pin, inner_led_pin: Pin) -> None:
         self.outer_led_pin = outer_led_pin
         self.inner_led_pin = inner_led_pin
+        self.diff_percent_cutoff = diff_percent_cutoff
         self._outer_led: Optional[LED] = None
         self._inner_led: Optional[LED] = None
 
@@ -61,7 +60,7 @@ class DirectionalLeds(LedIndicator):
 
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
-        if abs(lux.diff_percent) >= DIFF_PERCENT_CUTOFF:
+        if abs(lux.diff_percent) >= self.diff_percent_cutoff:
             if lux.outer > lux.inner:
                 logging.debug("lighting outer led")
                 self._outer_led.on()
