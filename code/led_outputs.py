@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 
-import logging
-import RPi.GPIO as GPIO
-import time
+from abc import abstractmethod
 from typing import Optional
+import logging
+import time
 
+import board
+import gpiozero
+import RPi.GPIO as GPIO
 import tm1637   # type: ignore
 
-from abc import abstractmethod
-from gpiozero import LED
-
-from common import Output, Status
+from common import Output, Pin, Status
 
 DIFF_PERCENT_CUTOFF = 30
+
+
+class LED(gpiozero.LED):
+    def __init__(self, pin: Pin) -> None:
+        super(LED, self).__init__(pin.id)
 
 
 class LedIndicator(Output):
@@ -33,11 +38,11 @@ class LedIndicator(Output):
 
 class DirectionalLeds(LedIndicator):
 
-    def __init__(self, outer_led_pin: int, inner_led_pin: int) -> None:
+    def __init__(self, outer_led_pin: Pin, inner_led_pin: Pin) -> None:
         self.outer_led_pin = outer_led_pin
         self.inner_led_pin = inner_led_pin
-        self._outer_led = None
-        self._inner_led = None
+        self._outer_led: Optional[LED] = None
+        self._inner_led: Optional[LED] = None
 
     def setup(self) -> None:
         self._outer_led = LED(self.outer_led_pin)
@@ -79,8 +84,8 @@ class DirectionalLeds(LedIndicator):
 class DigitDisplay(LedIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin: int, data_pin: int, brightness: int = 3) -> None:
-        self._display = tm1637.TM1637(clk=clock_pin, dio=data_pin)
+    def __init__(self, clock_pin: Pin, data_pin: Pin, brightness: int = 3) -> None:
+        self._display = tm1637.TM1637(clk=clock_pin.id, dio=data_pin.id)
         # The brightness of the display, from 0-7.
         self.brightness = brightness
 
@@ -133,11 +138,11 @@ class LedBarGraphs(LedIndicator):
     A level >= max_level will light all leds.
     """
 
-    def __init__(self, data_pin: int, latch_pin: int, clock_pin: int, min_level: int = 0,
+    def __init__(self, data_pin: Pin, latch_pin: Pin, clock_pin: Pin, min_level: int = 0,
                  num_leds: int = 8, max_level: int = 8, num_graphs: int = 2) -> None:
-        self.data_pin = data_pin
-        self.latch_pin = latch_pin
-        self.clock_pin = clock_pin
+        self.data_pin = data_pin.id
+        self.latch_pin = latch_pin.id
+        self.clock_pin = clock_pin.id
         # TODO: maybe get rid of min level?
         self.min_level = min_level
         self.num_leds = num_leds
@@ -209,7 +214,8 @@ if __name__ == '__main__':
     try:
         max_level = 16
         graphs = LedBarGraphs(
-                data_pin=26, latch_pin=19, clock_pin=13, min_level=8, max_level=max_level)
+                data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
+                min_level=8, max_level=max_level)
         graphs.setup()
         while True:
             for i in range(0, max_level+2):

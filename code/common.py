@@ -3,6 +3,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, NamedTuple, Union
 
+from adafruit_blinka.microcontroller.bcm283x.pin import Pin  # type: ignore # noqa
+
 # A reading of light sensor data.
 LuxReading = NamedTuple('LuxReading', [
     ('outer', int), ('inner', int), ('avg', int), ('diff', int),

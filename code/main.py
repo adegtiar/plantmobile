@@ -1,22 +1,20 @@
 #!/usr/bin/python3
 
-import board
 import logging
-import RPi.GPIO as GPIO
 import sys
 import time
 from typing import Callable, Iterable, List, NoReturn
 
-from gpiozero import Button, TonalBuzzer
+import board
+import RPi.GPIO as GPIO
 
 from common import ButtonPress, Direction, Status
-from led_outputs import DirectionalLeds, LedBarGraphs, LuxDiffDisplay, PositionDisplay
-from light_sensors import LightSensor
 from logger import LightCsvLogger, StatusPrinter
-from motor import StepperMotor
+from input_device import Button, DistanceSensor, LightSensor, VoltageReader
+from output_device import (
+        TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor, LedBarGraphs, LuxDiffDisplay
+)
 from platform_driver import PlatformDriver
-from ultrasonic_ranging import DistanceSensor
-from power_monitor import VoltageReader
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,7 +33,7 @@ def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
             platform.setup()
         except ValueError as e:
             # This might happen if the car is disconnected.
-            logging.error(e)
+            logging.exception(e)
             logging.warning(
                     "Failed to setup {} platform: may be disconnected.".format(platform.name))
         else:
@@ -46,7 +44,7 @@ def setup(platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
 def cleanup(platforms: Iterable[PlatformDriver]) -> None:
     for platform in platforms:
         platform.off()
-    # GPIO cleanup not needed when also using gpiozero
+    # GPIO cleanup handled by gpiozero.
     # GPIO.cleanup()
 
 
@@ -104,18 +102,21 @@ if __name__ == '__main__':
     STEPPER_CAR = PlatformDriver(
             name="Stepper",
             light_sensors=LightSensor(outer_pin=2, inner_pin=3),
-            motor=StepperMotor(27, 22, 10, 9),
-            distance_sensor=DistanceSensor(trig_pin=4, echo_pin=17, threshold_cm=10, timeout=0.05),
-            outer_button=Button(21),
-            inner_button=Button(16),
-            direction_leds=DirectionalLeds(outer_led_pin=20, inner_led_pin=12),
+            motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
+            distance_sensor=DistanceSensor(
+                trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10, timeout=0.05),
+            outer_button=Button(board.D21),
+            inner_button=Button(board.D16),
+            direction_leds=DirectionalLeds(outer_led_pin=board.D20, inner_led_pin=board.D12),
             voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
-            buzzer=TonalBuzzer(18),
+            buzzer=TonalBuzzer(board.D18),
             outputs=[
                 LightCsvLogger("data/car_sensor_log.csv"),
-                LedBarGraphs(data_pin=23, latch_pin=24, clock_pin=25, min_level=500, max_level=30000),
-                LuxDiffDisplay(clock_pin=6, data_pin=13),
-                PositionDisplay(clock_pin=19, data_pin=26),
+                LedBarGraphs(
+                    data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
+                    min_level=500, max_level=30000),
+                LuxDiffDisplay(clock_pin=board.D6, data_pin=board.D13),
+                PositionDisplay(clock_pin=board.D19, data_pin=board.D26),
                 StatusPrinter(print_interval=MAIN_LOOP_SLEEP_SECS),
             ])
 

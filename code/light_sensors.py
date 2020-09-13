@@ -1,14 +1,13 @@
-import adafruit_tsl2561  # type: ignore
-import adafruit_tca9548a  # type: ignore
+import logging
+from datetime import datetime
+
 import board
 import busio
-import logging
-
-from datetime import datetime
+from adafruit_tsl2561 import TSL2561  # type: ignore
+from adafruit_tca9548a import TCA9548A  # type: ignore
 from numpy import mean
 
 from common import Input, LuxReading
-from adafruit_tca9548a import TCA9548A
 
 
 class LightSensor(Input):
@@ -18,6 +17,15 @@ class LightSensor(Input):
     _mux = None
 
     def __init__(self, outer_pin: int, inner_pin: int, name: str = "<default>") -> None:
+        """
+        param outer_pin:
+            The outer sensor pin on the i2c mux
+        param inner_pin:
+            The inner sense pin on the i2c mux
+        param name:
+            The name used in logging.
+        """
+        assert all(0 <= pin <= 7 for pin in (outer_pin, inner_pin)), "mux pin must be 0-7."
         self.name = name
         self.outer_pin = outer_pin
         self.inner_pin = inner_pin
@@ -31,8 +39,8 @@ class LightSensor(Input):
             assert self._inner_tsl is None, "partially initialized state"
             logging.info("Initializing {} light sensors with mux pins Outer: {}, Inner: {}".format(
                 self.name, self.outer_pin, self.inner_pin))
-            self._outer_tsl = adafruit_tsl2561.TSL2561(LightSensor.get_mux()[self.outer_pin])
-            self._inner_tsl = adafruit_tsl2561.TSL2561(LightSensor.get_mux()[self.inner_pin])
+            self._outer_tsl = TSL2561(LightSensor.get_mux()[self.outer_pin])
+            self._inner_tsl = TSL2561(LightSensor.get_mux()[self.inner_pin])
 
     def off(self) -> None:
         # TODO: de-init tsl2561 or just handled by main?
@@ -45,7 +53,7 @@ class LightSensor(Input):
             # Create I2C bus as normal.
             i2c = busio.I2C(board.SCL, board.SDA)
             # Create the TCA9548A object and give it the I2C bus.
-            cls._mux = adafruit_tca9548a.TCA9548A(i2c)
+            cls._mux = TCA9548A(i2c)
         return cls._mux
 
     # Get a tuple of the current luminosity reading.

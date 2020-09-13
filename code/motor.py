@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-import RPi.GPIO as GPIO
 import time
-
 from typing import NoReturn
 
-from gpiozero import LED, Button
+import RPi.GPIO as GPIO
+import board
 from RpiMotorLib import RpiMotorLib  # type: ignore
 
-from common import Component, Rotation
-
+from common import Component, Pin, Rotation
+from input_device import Button
+from led_outputs import LED
 
 PAUSE_SECS = 0.001
 STEP_TYPE = "half"
@@ -18,8 +18,8 @@ STEP_TYPE = "half"
 class StepperMotor(Component):
     """The stepper motor moves in discrete steps and so can be used to track rotations."""
 
-    def __init__(self, pin1: int, pin2: int, pin3: int, pin4: int) -> None:
-        self.pins = (pin1, pin2, pin3, pin4)
+    def __init__(self, pin1: Pin, pin2: Pin, pin3: Pin, pin4: Pin) -> None:
+        self.pins = [pin.id for pin in (pin1, pin2, pin3, pin4)]
         self._motor = RpiMotorLib.BYJMotor("Stepper", "28BYJ")
 
     def setup(self) -> None:
@@ -32,7 +32,10 @@ class StepperMotor(Component):
             GPIO.output(pin, GPIO.LOW)
 
     def all_on(self) -> None:
-        """Set all the outputs of the motor to high. Only useful for lights."""
+        """Set all the outputs of the motor to high. Only useful for lights.
+
+        Warning: this drains a fair bit of current so use sparingly.
+        """
         for pin in self.pins:
             GPIO.output(pin, GPIO.HIGH)
 
@@ -86,12 +89,12 @@ if __name__ == '__main__':
     print('Program is starting...')
     print('BLUE button towards outer, RED towards inner')
     GPIO.setmode(GPIO.BCM)
-    MOTOR = StepperMotor(27, 22, 10, 9)
+    MOTOR = StepperMotor(board.D27, board.D22, board.MOSI, board.MISO)
     MOTOR.setup()
 
     try:
         control_loop(
-               motor=MOTOR, blue_button=Button(21), blue_led=LED(20),
-               red_button=Button(16), red_led=LED(12))
+               motor=MOTOR, blue_button=Button(board.D21), blue_led=LED(board.D20),
+               red_button=Button(board.D16), red_led=LED(board.D12))
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         pass

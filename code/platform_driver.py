@@ -1,16 +1,10 @@
 import logging
 import time
-
 from typing import Callable, Iterable, no_type_check, Optional
 
-from gpiozero import Button, TonalBuzzer
-
 from common import ButtonPress, Component, Direction, Region, Output, Status
-from led_outputs import DirectionalLeds, PositionDisplay
-from light_sensors import LightSensor
-from motor import StepperMotor
-from ultrasonic_ranging import DistanceSensor
-from power_monitor import VoltageReader
+from input_device import Button, DistanceSensor, LightSensor, VoltageReader
+from output_device import TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor
 
 STEPS_PER_MOVE = 7
 MOTOR_VOLTAGE_CUTOFF = 4.0
