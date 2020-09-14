@@ -15,6 +15,10 @@ class Controller(ABC):
 
     @abstractmethod
     def perform_action(self, status: Status) -> bool:
+        """Perform an action if one is appropriate for the current state.
+
+        Returns whether an action was performed.
+        """
         pass
 
 
@@ -131,7 +135,8 @@ class ButtonController(Controller):
         # TODO: move this into this class?
         button_press = self.debug_panel.get_directional_buttons()
         if button_press in (ButtonPress.OUTER, ButtonPress.INNER):
-            direction = button_press.corresponding_direction
+            direction = Direction.OUTER if button_press is Direction.OUTER else Direction.INNER
+
             if not self._hold_mode:
                 self.debug_panel.blink(times=2)
             self.platform.move_direction(direction, self._button_checker(button_press))

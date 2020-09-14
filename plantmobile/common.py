@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, NamedTuple, Union
+from typing import Any, Optional, NamedTuple
 
 from adafruit_blinka.microcontroller.bcm283x.pin import Pin  # type: ignore # noqa
 
@@ -49,15 +49,6 @@ class ButtonPress(Enum):
     OUTER = 1
     INNER = 2
     BOTH = 3
-
-    @property
-    def corresponding_direction(self) -> Union[Direction, None]:
-        if self is ButtonPress.OUTER:
-            return Direction.OUTER
-        elif self is ButtonPress.INNER:
-            return Direction.INNER
-        else:
-            return None
 
     @classmethod
     def from_buttons(cls, outer_pressed: bool, inner_pressed: bool) -> 'ButtonPress':
