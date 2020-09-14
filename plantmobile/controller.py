@@ -117,7 +117,7 @@ class AvoidShadowController(Controller):
                 self._move(Direction.OUTER)
                 return True
             elif lux.inner > lux.outer and status.region in (Region.MID, Region.OUTER_EDGE):
-                self._move(Direction.OUTER)
+                self._move(Direction.INNER)
                 return True
         return False
 
@@ -161,7 +161,7 @@ class ButtonController(Controller):
     def perform_action(self, status: Status) -> bool:
         # TODO: move this into this class?
         button_press = self.get_button_press()
-        logging.info("Button press: %s", button_press)
+        logging.debug("Button press: %s", button_press)
         if button_press in (ButtonPress.OUTER, ButtonPress.INNER):
             direction = Direction.OUTER if button_press is ButtonPress.OUTER else Direction.INNER
 
