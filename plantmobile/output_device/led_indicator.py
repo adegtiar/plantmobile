@@ -36,54 +36,45 @@ class LedIndicator(Output):
 
 class DirectionalLeds(LedIndicator):
 
-    def __init__(self, diff_percent_cutoff: int, outer_led_pin: Pin, inner_led_pin: Pin) -> None:
-        self.outer_led_pin = outer_led_pin
-        self.inner_led_pin = inner_led_pin
+    def __init__(self, outer_led: LED, inner_led: LED, diff_percent_cutoff: int) -> None:
+        self.outer_led = outer_led
+        self.inner_led = inner_led
         self.diff_percent_cutoff = diff_percent_cutoff
-        self._outer_led: Optional[LED] = None
-        self._inner_led: Optional[LED] = None
 
     def setup(self) -> None:
-        self._outer_led = LED(self.outer_led_pin)
-        self._inner_led = LED(self.inner_led_pin)
+        pass
 
     def on(self) -> None:
-        assert self._outer_led and self._inner_led, "Must call setup before outputting"
-
-        self._outer_led.on()
-        self._inner_led.on()
+        self.outer_led.on()
+        self.inner_led.on()
 
     def off(self) -> None:
         """Reset the LEDs to off."""
-        if self._outer_led:
-            self._outer_led.off()
-        if self._inner_led:
-            self._inner_led.off()
+        self.outer_led.off()
+        self.inner_led.off()
 
     def _output_status(self, status: Status) -> None:
-        assert self._outer_led and self._inner_led, "Must call setup before outputting"
-
         lux = status.lux
         # If one sensor is much brighter than the other, then light up the corresponding LED.
         if abs(lux.diff_percent) >= self.diff_percent_cutoff:
             if lux.outer > lux.inner:
                 logging.debug("lighting outer led")
-                self._outer_led.on()
-                self._inner_led.off()
+                self.outer_led.on()
+                self.inner_led.off()
             else:
                 assert lux.outer < lux.inner, "inconsistent lux reading"
                 logging.debug("lighting inner led")
-                self._inner_led.on()
-                self._outer_led.off()
+                self.inner_led.on()
+                self.outer_led.off()
         else:
-            self._inner_led.off()
-            self._outer_led.off()
+            self.inner_led.off()
+            self.outer_led.off()
 
 
 class DigitDisplay(LedIndicator):
     """A 7-digit display to show lux readings."""
 
-    def __init__(self, clock_pin: Pin, data_pin: Pin, brightness: int = 3) -> None:
+    def __init__(self, clock_pin: Pin, data_pin: Pin, brightness: int = 4) -> None:
         self._display = tm1637.TM1637(clk=clock_pin.id, dio=data_pin.id)
         # The brightness of the display, from 0-7.
         self.brightness = brightness
