@@ -15,7 +15,7 @@ class BatteryError(Exception):
     """Indicates the platform is unable to move due to a battery voltage issue."""
 
 
-class PlatformDriver(Component):
+class MobilePlatform(Component):
     """The main driver for a single platform, wrapping up all sensors, actuators, and outputs."""
 
     def __init__(self,

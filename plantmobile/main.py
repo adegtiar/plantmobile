@@ -14,13 +14,13 @@ from plantmobile.input_device import Button, DistanceSensor, LightSensor, Voltag
 from plantmobile.output_device import (
         TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor, LedBarGraphs, LuxDiffDisplay
 )
-from plantmobile.platform_driver import PlatformDriver
+from plantmobile.platform_driver import MobilePlatform
 
 DIFF_PERCENT_CUTOFF = 30
 PRINT_INTERVAL_SECS = 0.5
 
 
-def setup(debug_panel: DebugPanel, platforms: Iterable[PlatformDriver]) -> List[PlatformDriver]:
+def setup(debug_panel: DebugPanel, platforms: Iterable[MobilePlatform]) -> List[MobilePlatform]:
     # Use BCM GPIO numbering.
     GPIO.setmode(GPIO.BCM)
     debug_panel.setup()
@@ -40,7 +40,7 @@ def setup(debug_panel: DebugPanel, platforms: Iterable[PlatformDriver]) -> List[
     return working_platforms
 
 
-def cleanup(platforms: Iterable[PlatformDriver]) -> None:
+def cleanup(platforms: Iterable[MobilePlatform]) -> None:
     for platform in platforms:
         platform.off()
     # GPIO cleanup handled by gpiozero.
@@ -65,7 +65,7 @@ if __name__ == '__main__':
                 StatusPrinter(print_interval=PRINT_INTERVAL_SECS),
             ])
 
-    STEPPER_CAR = PlatformDriver(
+    STEPPER_CAR = MobilePlatform(
             name="Stepper",
             light_sensors=LightSensor(outer_pin=2, inner_pin=3),
             motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
@@ -79,7 +79,7 @@ if __name__ == '__main__':
             AvoidShadowController(STEPPER_CAR, DEBUG_PANEL, DIFF_PERCENT_CUTOFF),
     ]
 
-    # DC_CAR = PlatformDriver(
+    # DC_CAR = MobilePlatform(
     #         name="DC",
     #         light_sensors=LightSensor(outer_pin=1, inner_pin=0),
     #         outputs=[

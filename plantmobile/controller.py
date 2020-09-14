@@ -6,7 +6,7 @@ from typing import Callable, List, NoReturn, Optional
 from plantmobile.common import ButtonPress, Direction, Region, Status
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.output_device import Tune
-from plantmobile.platform_driver import BatteryError, PlatformDriver
+from plantmobile.platform_driver import BatteryError, MobilePlatform
 
 CONTROL_LOOP_SLEEP_SECS = 0.5
 
@@ -23,7 +23,7 @@ class Controller(ABC):
 
 
 def control_loop(
-        platform: PlatformDriver, debug_panel: DebugPanel, controllers: List[Controller]) -> NoReturn:
+        platform: MobilePlatform, debug_panel: DebugPanel, controllers: List[Controller]) -> NoReturn:
     """Runs the control loop for a platform.
 
     In each loop, the controllers will be run in order until one performs an action.
@@ -60,7 +60,7 @@ class AvoidShadowController(Controller):
     # TODO: add button enable/disable
     # TODO: add battery keep-alive?
 
-    def __init__(self, platform: PlatformDriver, debug_panel: DebugPanel, diff_percent_cutoff: int):
+    def __init__(self, platform: MobilePlatform, debug_panel: DebugPanel, diff_percent_cutoff: int):
         assert platform.motor, "Must have motor configured"
         assert platform.light_sensors, "Must have light sensors configured"
         self.platform = platform
@@ -108,7 +108,7 @@ class AvoidShadowController(Controller):
 
 class ButtonController(Controller):
 
-    def __init__(self, platform: PlatformDriver, debug_panel: DebugPanel):
+    def __init__(self, platform: MobilePlatform, debug_panel: DebugPanel):
         assert platform.motor, "Must have motor configured"
         assert debug_panel.outer_button and debug_panel.inner_button, "Must have buttons configured"
         self.platform = platform
