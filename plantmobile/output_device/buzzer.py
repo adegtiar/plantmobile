@@ -5,7 +5,7 @@ import gpiozero
 
 from plantmobile.common import Pin
 
-BEAT_DURATION = 0.33
+BEAT_DURATION = 0.3
 
 
 class Tune(object):
