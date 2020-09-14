@@ -173,10 +173,7 @@ class ButtonController(Controller):
             # Toggle between hold mode and auto mode.
             self.debug_panel.blink(times=3)
             self._hold_mode = not self._hold_mode
-            # Only move if we're transitioning into auto mode.
-            if not self._hold_mode:
-                self.platform.move_direction(Direction.OUTER, self._button_checker(None))
-            return True
+            return False
         elif button_press is ButtonPress.NONE:
             return False
         else:
