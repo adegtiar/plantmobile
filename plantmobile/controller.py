@@ -6,7 +6,7 @@ from typing import Callable, List, NoReturn, Optional
 from plantmobile.common import ButtonPress, Direction, Region, Status
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.input_device import Button
-from plantmobile.output_device import Tune
+from plantmobile.output_device import LED, Tune
 from plantmobile.platform_driver import BatteryError, MobilePlatform
 
 CONTROL_LOOP_SLEEP_SECS = 0.5
@@ -60,19 +60,31 @@ class AvoidShadowController(Controller):
     # TODO: bias towards outer
     # TODO: add smoothing
     # TODO: add rate-limiting
-    # TODO: add button enable/disable
     # TODO: add battery keep-alive?
 
-    def __init__(self, platform: MobilePlatform, debug_panel: DebugPanel, diff_percent_cutoff: int):
+    def __init__(
+            self,
+            platform: MobilePlatform,
+            debug_panel: DebugPanel,
+            enable_button: Button,
+            led: LED,
+            diff_percent_cutoff: int):
         assert platform.motor, "Must have motor configured"
         assert platform.light_sensors, "Must have light sensors configured"
         self.platform = platform
         self.debug_panel = debug_panel
         self.diff_percent_cutoff = diff_percent_cutoff
-        self._enabled = True
+        self.led = led
+        self.enable_button = enable_button,
+        self._enabled = False
+
+        enable_button.when_pressed = self.toggle_enabled
 
     def toggle_enabled(self) -> None:
         self._enabled = not self._enabled
+        self.led.toggle()
+        # TODO: stop buzzer?
+        # TODO: stop motor
 
     def _notify(self) -> None:
         if self.debug_panel.buzzer:
@@ -131,6 +143,7 @@ class ButtonController(Controller):
 
     def _button_checker(
             self, manual_hold_button: Optional[ButtonPress]) -> Callable[[Status], bool]:
+        # TODO: make this on press/release or hold.
         def should_continue(status: Status) -> bool:
             # Output any status updates.
             self.debug_panel.output_status(status)

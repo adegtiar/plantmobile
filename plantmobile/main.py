@@ -12,7 +12,13 @@ from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
 from plantmobile.output_device import (
-        TonalBuzzer, DirectionalLeds, PositionDisplay, StepperMotor, LedBarGraphs, LuxDiffDisplay
+        DirectionalLeds,
+        LED,
+        LedBarGraphs,
+        LuxDiffDisplay,
+        PositionDisplay,
+        StepperMotor,
+        TonalBuzzer,
 )
 from plantmobile.platform_driver import MobilePlatform
 
@@ -75,7 +81,8 @@ if __name__ == '__main__':
             ButtonController(
                 STEPPER_CAR, DEBUG_PANEL,
                 outer_button=Button(board.D21), inner_button=Button(board.D16)),
-            AvoidShadowController(STEPPER_CAR, DEBUG_PANEL, DIFF_PERCENT_CUTOFF),
+            AvoidShadowController(
+                STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF),
     ]
 
     # DC_CAR = MobilePlatform(
