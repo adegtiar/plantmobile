@@ -78,24 +78,26 @@ class AvoidShadowController(Controller):
         self.debug_panel.output_status(status)
         return self._enabled
 
+    def _move(self, direction: Direction) -> None:
+        self._notify()
+        self.platform.move_direction(direction, self._should_continue)
+
     def perform_action(self, status: Status) -> bool:
         lux = status.lux
         if not self._enabled:
             return False
 
         if self.platform.get_region() is Region.UNKNOWN:
-            self._notify()
-            self.platform.move_direction(Direction.OUTER, self._should_continue)
+            # Initialize the position.
+            self._move(Direction.OUTER)
             return True
         elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
             # TODO: stop on button press
             if lux.outer > lux.inner and status.region != Region.OUTER_EDGE:
-                self._notify()
-                self.platform.move_direction(Direction.OUTER, self._should_continue)
+                self._move(Direction.OUTER)
                 return True
             elif lux.inner > lux.outer and status.region in (Region.MID, Region.OUTER_EDGE):
-                self._notify()
-                self.platform.move_direction(Direction.INNER, self._should_continue)
+                self._move(Direction.OUTER)
                 return True
         return False
 
@@ -128,15 +130,11 @@ class ButtonController(Controller):
     def perform_action(self, status: Status) -> bool:
         # TODO: move this into this class?
         button_press = self.debug_panel.get_directional_buttons()
-        if button_press is ButtonPress.OUTER:
+        if button_press in (ButtonPress.OUTER, ButtonPress.INNER):
+            direction = button_press.corresponding_direction
             if not self._hold_mode:
                 self.debug_panel.blink(times=2)
-            self.platform.move_direction(Direction.OUTER, self._button_checker(ButtonPress.OUTER))
-            return True
-        elif button_press is ButtonPress.INNER:
-            if not self._hold_mode:
-                self.debug_panel.blink(times=2)
-            self.platform.move_direction(Direction.INNER, self._button_checker(ButtonPress.INNER))
+            self.platform.move_direction(direction, self._button_checker(button_press))
             return True
         elif button_press is ButtonPress.BOTH:
             # Toggle between hold mode and auto mode.
