@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Iterable, no_type_check, Optional
+from typing import Callable, Optional, no_type_check
 
 from plantmobile.common import Output, Status
 from plantmobile.output_device import TonalBuzzer, DirectionalLeds, PositionDisplay
@@ -9,19 +9,17 @@ ERROR_TONE_HZ = 220
 
 
 class DebugPanel(Output):
-    def __init__(self,
-                 outputs: Iterable[Output] = (),
-                 buzzer: Optional[TonalBuzzer] = None) -> None:
+    def __init__(self, *outputs: Output, buzzer: Optional[TonalBuzzer] = None) -> None:
+        self.outputs = outputs
         self.buzzer = buzzer
-        self.outputs = list(outputs)
 
-        self._direction_leds = None
-        self._position_display = None
+        self.direction_leds = None
+        self.position_display = None
         for output in outputs:
             if isinstance(output, PositionDisplay):
-                self._position_display = output
+                self.position_display = output
             elif isinstance(output, DirectionalLeds):
-                self._direction_leds = output
+                self.direction_leds = output
 
     def setup(self) -> None:
         """Initialize all components of the debug panel.
@@ -53,25 +51,29 @@ class DebugPanel(Output):
 
     @no_type_check
     def output_error(self, output: str) -> None:
-        assert self._position_display and self.buzzer, \
-                "position display and buzzer must be configured"
+        assert self.position_display or self.buzzer, \
+                "position display or buzzer must be configured"
 
         def on():
-            self._position_display.show(output)
-            self.buzzer.play(ERROR_TONE_HZ)
+            if self.position_display:
+                self.position_display.show(output)
+            if self.buzzer:
+                self.buzzer.play(ERROR_TONE_HZ)
 
         def off():
-            self._position_display.off()
-            self.buzzer.stop()
+            if self.position_display:
+                self.position_display.off()
+            if self.buzzer:
+                self.buzzer.stop()
         self._blink(on, off, times=1, on_secs=1, off_secs=0.5)
 
     @no_type_check
     def blink(self, times: int = 2, pause_secs: float = 0.2) -> None:
-        assert self._direction_leds, "LEDs must be configured"
+        assert self.direction_leds, "LEDs must be configured"
 
         def on() -> None:
-            self._direction_leds.on()
+            self.direction_leds.on()
 
         def off() -> None:
-            self._direction_leds.off()
+            self.direction_leds.off()
         self._blink(on, off, times=2, on_secs=0.2, off_secs=0.2)

@@ -50,18 +50,17 @@ def cleanup(platforms: Iterable[MobilePlatform]) -> None:
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     DEBUG_PANEL = DebugPanel(
+            DirectionalLeds(
+                DIFF_PERCENT_CUTOFF, outer_led_pin=board.D20, inner_led_pin=board.D12),
+            LightCsvLogger("data/car_sensor_log.csv"),
+            LedBarGraphs(
+                data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
+                min_level=500, max_level=30000),
+            LuxDiffDisplay(clock_pin=board.D6, data_pin=board.D13),
+            PositionDisplay(clock_pin=board.D19, data_pin=board.D26),
+            StatusPrinter(print_interval=PRINT_INTERVAL_SECS),
             buzzer=TonalBuzzer(board.D18),
-            outputs=[
-                DirectionalLeds(
-                    DIFF_PERCENT_CUTOFF, outer_led_pin=board.D20, inner_led_pin=board.D12),
-                LightCsvLogger("data/car_sensor_log.csv"),
-                LedBarGraphs(
-                    data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
-                    min_level=500, max_level=30000),
-                LuxDiffDisplay(clock_pin=board.D6, data_pin=board.D13),
-                PositionDisplay(clock_pin=board.D19, data_pin=board.D26),
-                StatusPrinter(print_interval=PRINT_INTERVAL_SECS),
-            ])
+    )
 
     STEPPER_CAR = MobilePlatform(
             name="Stepper",
