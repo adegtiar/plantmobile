@@ -1,8 +1,7 @@
 import time
 from typing import Callable, Iterable, no_type_check, Optional
 
-from plantmobile.common import ButtonPress, Output, Status
-from plantmobile.input_device import Button
+from plantmobile.common import Output, Status
 from plantmobile.output_device import TonalBuzzer, DirectionalLeds, PositionDisplay
 
 # The tone to buzz on motor error.
@@ -11,12 +10,8 @@ ERROR_TONE_HZ = 220
 
 class DebugPanel(Output):
     def __init__(self,
-                 outer_button: Optional[Button] = None,
-                 inner_button: Optional[Button] = None,
                  outputs: Iterable[Output] = (),
                  buzzer: Optional[TonalBuzzer] = None) -> None:
-        self.outer_button = outer_button
-        self.inner_button = inner_button
         self.buzzer = buzzer
         self.outputs = list(outputs)
 
@@ -80,9 +75,3 @@ class DebugPanel(Output):
         def off() -> None:
             self._direction_leds.off()
         self._blink(on, off, times=2, on_secs=0.2, off_secs=0.2)
-
-    def get_directional_buttons(self) -> ButtonPress:
-        """Gets the current button press status."""
-        return ButtonPress.from_buttons(
-                outer_pressed=bool(self.outer_button and self.outer_button.is_pressed),
-                inner_pressed=bool(self.inner_button and self.inner_button.is_pressed))

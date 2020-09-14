@@ -50,8 +50,6 @@ def cleanup(platforms: Iterable[MobilePlatform]) -> None:
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     DEBUG_PANEL = DebugPanel(
-            outer_button=Button(board.D21),
-            inner_button=Button(board.D16),
             buzzer=TonalBuzzer(board.D18),
             outputs=[
                 DirectionalLeds(
@@ -75,7 +73,9 @@ if __name__ == '__main__':
     )
 
     CONTROLLERS = [
-            ButtonController(STEPPER_CAR, DEBUG_PANEL),
+            ButtonController(
+                STEPPER_CAR, DEBUG_PANEL,
+                outer_button=Button(board.D21), inner_button=Button(board.D16)),
             AvoidShadowController(STEPPER_CAR, DEBUG_PANEL, DIFF_PERCENT_CUTOFF),
     ]
 

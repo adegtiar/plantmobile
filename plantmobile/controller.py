@@ -5,6 +5,7 @@ from typing import Callable, List, NoReturn, Optional
 
 from plantmobile.common import ButtonPress, Direction, Region, Status
 from plantmobile.debug_panel import DebugPanel
+from plantmobile.input_device import Button
 from plantmobile.output_device import Tune
 from plantmobile.platform_driver import BatteryError, MobilePlatform
 
@@ -23,7 +24,9 @@ class Controller(ABC):
 
 
 def control_loop(
-        platform: MobilePlatform, debug_panel: DebugPanel, controllers: List[Controller]) -> NoReturn:
+        platform: MobilePlatform,
+        debug_panel: DebugPanel,
+        controllers: List[Controller]) -> NoReturn:
     """Runs the control loop for a platform.
 
     In each loop, the controllers will be run in order until one performs an action.
@@ -108,20 +111,30 @@ class AvoidShadowController(Controller):
 
 class ButtonController(Controller):
 
-    def __init__(self, platform: MobilePlatform, debug_panel: DebugPanel):
-        assert platform.motor, "Must have motor configured"
-        assert debug_panel.outer_button and debug_panel.inner_button, "Must have buttons configured"
+    def __init__(self,
+                 platform: MobilePlatform,
+                 debug_panel: DebugPanel,
+                 outer_button: Button,
+                 inner_button: Button) -> None:
         self.platform = platform
         self.debug_panel = debug_panel
+        self.outer_button = outer_button
+        self.inner_button = inner_button
         # In hold mode, hold the button down for movement.
         self._hold_mode = True
+
+    def get_button_press(self) -> ButtonPress:
+        """Gets the current button press status."""
+        return ButtonPress.from_buttons(
+                outer_pressed=bool(self.outer_button.is_pressed),
+                inner_pressed=bool(self.inner_button.is_pressed))
 
     def _button_checker(
             self, manual_hold_button: Optional[ButtonPress]) -> Callable[[Status], bool]:
         def should_continue(status: Status) -> bool:
             # Output any status updates.
             self.debug_panel.output_status(status)
-            button_press = self.debug_panel.get_directional_buttons()
+            button_press = self.get_button_press()
 
             if self._hold_mode:
                 # Keep moving while the button is held down.
@@ -133,9 +146,10 @@ class ButtonController(Controller):
 
     def perform_action(self, status: Status) -> bool:
         # TODO: move this into this class?
-        button_press = self.debug_panel.get_directional_buttons()
+        button_press = self.get_button_press()
+        logging.info("Button press: %s", button_press)
         if button_press in (ButtonPress.OUTER, ButtonPress.INNER):
-            direction = Direction.OUTER if button_press is Direction.OUTER else Direction.INNER
+            direction = Direction.OUTER if button_press is ButtonPress.OUTER else Direction.INNER
 
             if not self._hold_mode:
                 self.debug_panel.blink(times=2)
