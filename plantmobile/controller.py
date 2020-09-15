@@ -238,8 +238,7 @@ class BatteryKeepAlive(Controller):
         if self.enabled() and now - self._last_ping > self.ping_interval_secs:
             logging.info("%d seconds elapsed: running keepalive ping for %.1f seconds",
                          self.ping_interval_secs, self.ping_duration_secs)
-            # TODO: do we have to pass status in?
-            self.platform.ping_motor(status, self.ping_duration_secs)
             self._last_ping = now
+            self.platform.ping_motor(status, self.ping_duration_secs)
             return True
         return False
