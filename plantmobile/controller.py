@@ -60,7 +60,6 @@ class AvoidShadowController(Controller):
     # TODO: bias towards outer
     # TODO: add smoothing
     # TODO: add rate-limiting
-    # TODO: add battery keep-alive?
     # TODO: add minimum light level
 
     def __init__(
