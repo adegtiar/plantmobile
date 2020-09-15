@@ -81,14 +81,14 @@ class AvoidShadowController(Controller):
         enable_button.when_pressed = self.toggle_enabled
 
     def toggle_enabled(self, enabled: Optional[bool] = None) -> None:
-        enable = enabled if enabled is not None else not self.get_enabled()
+        enable = enabled if enabled is not None else not self.enabled()
         if enable:
             self.enabled_led.on()
         else:
             self.enabled_led.off()
         # TODO: stop buzzer?
 
-    def get_enabled(self) -> bool:
+    def enabled(self) -> bool:
         return self.enabled_led.is_active
 
     def _notify(self) -> None:
@@ -100,7 +100,7 @@ class AvoidShadowController(Controller):
     def _should_continue(self, status: Status) -> bool:
         # Output any status updates.
         self.debug_panel.output_status(status)
-        return self.get_enabled()
+        return self.enabled()
 
     def _move(self, direction: Direction) -> None:
         self._notify()
@@ -108,7 +108,7 @@ class AvoidShadowController(Controller):
 
     def perform_action(self, status: Status) -> bool:
         lux = status.lux
-        if not self.get_enabled():
+        if not self.enabled():
             return False
 
         if self.platform.get_region() is Region.UNKNOWN:
@@ -217,3 +217,30 @@ class ButtonController(Controller):
                 self._direction_commanded = None
         else:
             return False
+
+
+class BatteryKeepAlive(Controller):
+
+    def __init__(self,
+                 platform: MobilePlatform,
+                 ping_interval_secs: float,
+                 ping_duration_secs: float,
+                 enabled: Callable[[], bool] = lambda: True,
+                 ) -> None:
+        assert ping_interval_secs > 0, "Ping interval must be positive"
+        self.platform = platform
+        self.ping_interval_secs = ping_interval_secs
+        self.ping_duration_secs = ping_duration_secs
+        self.enabled = enabled
+        self._last_ping = float("-inf")
+
+    def perform_action(self, status: Status) -> bool:
+        now = time.time()
+        if self.enabled() and now - self._last_ping > self.ping_interval_secs:
+            logging.info("%d seconds elapsed: running keepalive ping for %.1f seconds",
+                         self.ping_interval_secs, self.ping_duration_secs)
+            # TODO: do we have to pass status in?
+            self.platform.ping_motor(status, self.ping_duration_secs)
+            self._last_ping = now
+            return True
+        return False

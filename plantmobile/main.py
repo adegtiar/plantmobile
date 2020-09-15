@@ -7,7 +7,9 @@ from typing import Iterable, List
 import board
 import RPi.GPIO as GPIO
 
-from plantmobile.controller import AvoidShadowController, ButtonController, control_loop
+from plantmobile.controller import (
+        AvoidShadowController, BatteryKeepAlive, ButtonController, control_loop,
+)
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
@@ -22,8 +24,14 @@ from plantmobile.output_device import (
 )
 from plantmobile.platform_driver import MobilePlatform
 
+# How different one sensor has to be from the average to trigger a move.
 DIFF_PERCENT_CUTOFF = 30
+# How often the status is printer to stdout.
 PRINT_INTERVAL_SECS = 0.5
+# How often to ping the battery with some current to keep it alive.
+PING_INTERVAL_SECS = 85
+# How long to trigger the battery with current during a keepalive ping.
+PING_DURATION_SECS = 0.3
 
 
 def setup(debug_panel: DebugPanel, platforms: Iterable[MobilePlatform]) -> List[MobilePlatform]:
@@ -76,13 +84,13 @@ if __name__ == '__main__':
             voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
     )
 
-    CONTROLLERS = [
-            ButtonController(
-                STEPPER_CAR, DEBUG_PANEL,
-                outer_button=Button(board.D21), inner_button=Button(board.D16)),
-            AvoidShadowController(
-                STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF),
-    ]
+    button_control = ButtonController(
+        STEPPER_CAR, DEBUG_PANEL, outer_button=Button(board.D21), inner_button=Button(board.D16))
+    shadow_avoider = AvoidShadowController(
+        STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
+    keep_alive = BatteryKeepAlive(
+            STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, shadow_avoider.enabled)
+    CONTROLLERS = [button_control, shadow_avoider, keep_alive]
 
     # DC_CAR = MobilePlatform(
     #         name="DC",

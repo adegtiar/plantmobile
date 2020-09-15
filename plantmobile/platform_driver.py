@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Callable, Optional
 
 from plantmobile.common import Component, Direction, Region, Status
@@ -96,7 +97,7 @@ class MobilePlatform(Component):
             log("Resetting outer edge position (drift: {})".format(self.position))
         self.position = Region.OUTER_EDGE.value
 
-    def _voltage_low(self, status: Status) -> bool:
+    def voltage_low(self, status: Status) -> bool:
         """Returns whether the motor voltage is too low to actuate."""
         return status.motor_voltage is not None and status.motor_voltage < MOTOR_VOLTAGE_CUTOFF
 
@@ -114,7 +115,7 @@ class MobilePlatform(Component):
             # When moving towards the outer edge, cross-check with the sensor in case we've drifted.
             status = self.get_status(force_edge_check=direction is Direction.OUTER)
 
-            if self._voltage_low(status):
+            if self.voltage_low(status):
                 logging.error(stop_fmt, "insufficient voltage", steps)
                 raise BatteryError()
             elif not should_continue(status):
@@ -133,3 +134,12 @@ class MobilePlatform(Component):
                 if self.position is not None:
                     self.position += direction.value
         assert False, "should terminate within the loop"
+
+    def ping_motor(self, status: Status, duration_secs: float) -> None:
+        if self.voltage_low(status):
+            raise BatteryError("Cannot ping battery: voltage too low")
+        assert self.motor, "must have motor configured to ping it"
+
+        self.motor.all_on()
+        time.sleep(duration_secs)
+        self.motor.off()
