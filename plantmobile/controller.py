@@ -123,6 +123,11 @@ class AvoidShadowController(Controller):
 
 
 class ButtonController(Controller):
+    """Controller for the mobile platform via two buttons.
+
+    In hold mode, hold one of the buttons for movement and let go to stop.
+    In press mode, press one of the buttons and it will move until it reaches an edge.
+    """
 
     def __init__(self,
                  platform: MobilePlatform,
@@ -187,27 +192,24 @@ class ButtonController(Controller):
         return Direction.INNER if button is self.inner_button else Direction.OUTER
 
     def toggle_hold_mode(self) -> None:
-        # Toggle between hold mode and auto mode.
+        """Toggle between hold mode and press mode."""
         self.debug_panel.blink(times=3)
         self._hold_mode = not self._hold_mode
 
-    def _should_continue(
-            self, direction_commanded: Direction) -> Callable[[Status], bool]:
+    def _should_continue(self, direction_commanded: Direction) -> Callable[[Status], bool]:
         def should_continue(status: Status) -> bool:
-            # Output any status updates.
             self.debug_panel.output_status(status)
             return self._direction_commanded is direction_commanded
         return should_continue
 
     def perform_action(self, status: Status) -> bool:
-        # TODO: move this into this class?
         direction = self._direction_commanded
         if direction:
             try:
                 self.platform.move_direction(direction, self._should_continue(direction))
-                # Cancel the command if move_direction finished normally.
                 return True
             finally:
+                # Clear the command if move_direction finished without cancellation.
                 self._direction_commanded = None
         else:
             return False
