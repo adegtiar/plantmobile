@@ -68,24 +68,28 @@ class AvoidShadowController(Controller):
             platform: MobilePlatform,
             debug_panel: DebugPanel,
             enable_button: Button,
-            led: LED,
+            enabled_led: LED,
             diff_percent_cutoff: int):
         assert platform.motor, "Must have motor configured"
         assert platform.light_sensors, "Must have light sensors configured"
         self.platform = platform
         self.debug_panel = debug_panel
         self.diff_percent_cutoff = diff_percent_cutoff
-        self.led = led
+        self.enabled_led = enabled_led
         self.enable_button = enable_button,
-        self._enabled = False
 
         enable_button.when_pressed = self.toggle_enabled
 
-    def toggle_enabled(self) -> None:
-        self._enabled = not self._enabled
-        self.led.toggle()
+    def toggle_enabled(self, enabled: Optional[bool] = None) -> None:
+        enable = enabled if enabled is not None else not self.get_enabled()
+        if enable:
+            self.enabled_led.on()
+        else:
+            self.enabled_led.off()
         # TODO: stop buzzer?
-        # TODO: stop motor
+
+    def get_enabled(self) -> bool:
+        return self.enabled_led.is_active
 
     def _notify(self) -> None:
         if self.debug_panel.buzzer:
@@ -96,7 +100,7 @@ class AvoidShadowController(Controller):
     def _should_continue(self, status: Status) -> bool:
         # Output any status updates.
         self.debug_panel.output_status(status)
-        return self._enabled
+        return self.get_enabled()
 
     def _move(self, direction: Direction) -> None:
         self._notify()
@@ -104,7 +108,7 @@ class AvoidShadowController(Controller):
 
     def perform_action(self, status: Status) -> bool:
         lux = status.lux
-        if not self._enabled:
+        if not self.get_enabled():
             return False
 
         if self.platform.get_region() is Region.UNKNOWN:
