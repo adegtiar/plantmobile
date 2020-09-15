@@ -44,24 +44,6 @@ class Direction(Enum):
         return Region.OUTER_EDGE if self is Direction.OUTER else Region.INNER_EDGE
 
 
-class ButtonPress(Enum):
-    NONE = 0
-    OUTER = 1
-    INNER = 2
-    BOTH = 3
-
-    @classmethod
-    def from_buttons(cls, outer_pressed: bool, inner_pressed: bool) -> 'ButtonPress':
-        if outer_pressed and inner_pressed:
-            return ButtonPress.BOTH
-        elif outer_pressed:
-            return ButtonPress.OUTER
-        elif inner_pressed:
-            return ButtonPress.INNER
-        else:
-            return ButtonPress.NONE
-
-
 Status = NamedTuple('Status', [
     ('name', str), ('lux', LuxReading), ('motor_voltage', Optional[float]),
     ('position', Optional[int]), ('region', Region)])

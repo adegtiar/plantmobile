@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Callable, List, NoReturn, Optional
 
-from plantmobile.common import ButtonPress, Direction, Region, Status
+from plantmobile.common import Direction, Region, Status
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.input_device import Button
 from plantmobile.output_device import LED, Tune
@@ -128,53 +128,86 @@ class ButtonController(Controller):
                  platform: MobilePlatform,
                  debug_panel: DebugPanel,
                  outer_button: Button,
-                 inner_button: Button) -> None:
+                 inner_button: Button,
+                 hold_button_threshold_secs: float = 0.1) -> None:
         self.platform = platform
         self.debug_panel = debug_panel
+        for button in (outer_button, inner_button):
+            button.when_pressed = self._on_press
+            button.when_held = self._on_hold
+            button.when_released = self._on_release
+            button.hold_time = hold_button_threshold_secs
         self.outer_button = outer_button
         self.inner_button = inner_button
         # In hold mode, hold the button down for movement.
         self._hold_mode = True
+        self._direction_commanded: Optional[Direction] = None
 
-    def get_button_press(self) -> ButtonPress:
-        """Gets the current button press status."""
-        return ButtonPress.from_buttons(
-                outer_pressed=bool(self.outer_button.is_pressed),
-                inner_pressed=bool(self.inner_button.is_pressed))
+    def _on_press(self, button: Button) -> None:
+        # This logic controller the non-hold mode.
+        logging.debug("Button press: %s", button)
 
-    def _button_checker(
-            self, manual_hold_button: Optional[ButtonPress]) -> Callable[[Status], bool]:
-        # TODO: make this on press/release or hold.
+        if self.outer_button.is_pressed and self.inner_button.is_pressed:
+            # Both are pressed.
+            self._direction_commanded = None
+            self.toggle_hold_mode()
+            logging.debug("Both buttons pressed: toggling hold mode to %s", self._hold_mode)
+            return
+        if self._hold_mode:
+            # Hold mode commands are handled by _on_hold.
+            return
+
+        if self._direction_commanded:
+            # Any button press cancels an in-progress move.
+            logging.debug("Cancelling in-progress command %s (press)", self._direction_commanded)
+            self._direction_commanded = None
+        else:
+            self._direction_commanded = self._corresponding_direction(button)
+            logging.debug("Commanding move in direction %s (press)", self._direction_commanded)
+
+    def _on_hold(self, button: Button) -> None:
+        logging.debug("Button hold: %s", button)
+        if not self._hold_mode:
+            # Press mode commands are handled by _on_press.
+            return
+
+        if self.outer_button.is_pressed and self.inner_button.is_pressed:
+            logging.debug("Both buttons held: doing nothing")
+            return
+
+        self._direction_commanded = self._corresponding_direction(button)
+        logging.debug("Commanding move in direction %s (hold)", self._direction_commanded)
+
+    def _on_release(self, button: Button) -> None:
+        if self._hold_mode:
+            logging.debug("Button %s no longer held down. Cancelling movement", button)
+            self._direction_commanded = None
+
+    def _corresponding_direction(self, button: Button) -> Direction:
+        return Direction.INNER if button is self.inner_button else Direction.OUTER
+
+    def toggle_hold_mode(self) -> None:
+        # Toggle between hold mode and auto mode.
+        self.debug_panel.blink(times=3)
+        self._hold_mode = not self._hold_mode
+
+    def _should_continue(
+            self, direction_commanded: Direction) -> Callable[[Status], bool]:
         def should_continue(status: Status) -> bool:
             # Output any status updates.
             self.debug_panel.output_status(status)
-            button_press = self.get_button_press()
-
-            if self._hold_mode:
-                # Keep moving while the button is held down.
-                return button_press is manual_hold_button
-            else:
-                # Keep moving unless any button is pressed to cancel it.
-                return button_press is ButtonPress.NONE
+            return self._direction_commanded is direction_commanded
         return should_continue
 
     def perform_action(self, status: Status) -> bool:
         # TODO: move this into this class?
-        button_press = self.get_button_press()
-        logging.debug("Button press: %s", button_press)
-        if button_press in (ButtonPress.OUTER, ButtonPress.INNER):
-            direction = Direction.OUTER if button_press is ButtonPress.OUTER else Direction.INNER
-
-            if not self._hold_mode:
-                self.debug_panel.blink(times=2)
-            self.platform.move_direction(direction, self._button_checker(button_press))
-            return True
-        elif button_press is ButtonPress.BOTH:
-            # Toggle between hold mode and auto mode.
-            self.debug_panel.blink(times=3)
-            self._hold_mode = not self._hold_mode
-            return False
-        elif button_press is ButtonPress.NONE:
-            return False
+        direction = self._direction_commanded
+        if direction:
+            try:
+                self.platform.move_direction(direction, self._should_continue(direction))
+                # Cancel the command if move_direction finished normally.
+                return True
+            finally:
+                self._direction_commanded = None
         else:
-            assert False, "unknown button press {}".format(button_press)
+            return False
