@@ -183,10 +183,9 @@ class LedBarGraphs(LedIndicator):
         GPIO.output(self.latch_pin, GPIO.LOW)   # Prepare the shift registers for input
         for i, level in enumerate(levels):
             led_level = self._get_leds_for_level(level)
-            logging.debug(
-                    "setting output of Graph {} to level {} ({} leds)".format(i, level, led_level))
+            logging.debug("setting output of Graph{} to level {}/{} ({}/{} leds)".format(
+                          i, level, self.max_level, led_level, self.num_leds))
             self._set_leds(led_level)
-        logging.debug("latching output to update graphs")
         GPIO.output(self.latch_pin, GPIO.HIGH)  # Latch the output to the latest register values.
         GPIO.output(self.latch_pin, GPIO.LOW)   # Keep latch pin low.
 
