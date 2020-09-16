@@ -47,6 +47,7 @@ def control_loop(
                     logging.debug("Performed action from %s", controller)
                     break
         except BatteryError:
+            logging.warning("insufficient battery voltage: is the power bank enabled?")
             debug_panel.output_error("BATT")
 
         time.sleep(CONTROL_LOOP_SLEEP_SECS)
@@ -80,12 +81,8 @@ class AvoidShadowController(Controller):
 
         enable_button.when_pressed = self.toggle_enabled
 
-    def toggle_enabled(self, enabled: Optional[bool] = None) -> None:
-        enable = enabled if enabled is not None else not self.enabled()
-        if enable:
-            self.enabled_led.on()
-        else:
-            self.enabled_led.off()
+    def toggle_enabled(self) -> None:
+        self.enabled_led.toggle()
         # TODO: stop buzzer?
 
     def enabled(self) -> bool:
