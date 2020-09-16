@@ -76,7 +76,7 @@ class AvoidShadowController(Controller):
         self.diff_percent_cutoff = diff_percent_cutoff
         self.enabled_led = enabled_led
         self.enable_button = enable_button,
-        self.min_light_level = 20
+        self.min_light_level = min_light_level
 
         enable_button.when_pressed = self.toggle_enabled
 
