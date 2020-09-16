@@ -101,7 +101,7 @@ class AvoidShadowController(Controller):
     def _move(self, direction: Direction, status: Status) -> None:
         if ((direction is Direction.OUTER and status.region == Region.OUTER_EDGE)
                 or (direction is Direction.INNER and status.region == Region.INNER_EDGE)):
-            # Don't try to move if we're at the corresponding edge.
+            # Don't try to move if we're already at the corresponding edge.
             return
 
         if direction is Direction.INNER:
@@ -116,22 +116,23 @@ class AvoidShadowController(Controller):
             return False
 
         if self.platform.get_region() is Region.UNKNOWN:
-            # Initialize the position.
+            logging.debug("Region unknown: moving to outer edge to initialize")
             self._move(Direction.OUTER, status)
             return True
 
         peak_lux = max(lux.outer, lux.inner)
         if peak_lux < self.lux_threshold:
-            logging.debug("Light below threshold: moving to inner (%s lux)", peak_lux)
+            logging.debug("Light below threshold: moving to inner edge (%s lux)", peak_lux)
             self._move(Direction.INNER, status)
         elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
-            # Move to outer or inner edge depending on which is brighter.
             if lux.outer > lux.inner:
+                logging.debug("Light difference found: moving to outer edge")
                 self._move(Direction.OUTER, status)
             elif lux.inner > lux.outer:
+                logging.debug("Light difference found: moving to inner edge")
                 self._move(Direction.INNER, status)
         else:
-            # By default, move to the outer edge if lux is above threshold
+            logging.debug("Light above threshold: moving to inner edge (%s lux)", peak_lux)
             self._move(Direction.OUTER, status)
         return True
 
