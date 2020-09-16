@@ -57,7 +57,7 @@ def control_loop(
 AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5", "D5"], [1, 1, 1, 2, 2])
 
 
-class AvoidShadowController(Controller):
+class LightFollower(Controller):
     # TODO: add smoothing
     # TODO: add rate-limiting
 
@@ -137,7 +137,7 @@ class AvoidShadowController(Controller):
         return True
 
 
-class ButtonController(Controller):
+class ButtonHandler(Controller):
     """Controller for the mobile platform via two buttons.
 
     In hold mode, hold one of the buttons for movement and let go to stop.

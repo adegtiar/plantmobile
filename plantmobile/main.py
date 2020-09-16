@@ -8,7 +8,7 @@ import board
 import RPi.GPIO as GPIO
 
 from plantmobile.controller import (
-        AvoidShadowController, BatteryKeepAlive, ButtonController, control_loop,
+        BatteryKeepAlive, ButtonHandler, control_loop, LightFollower,
 )
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
@@ -84,13 +84,13 @@ if __name__ == '__main__':
             voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
     )
 
-    button_control = ButtonController(
+    button_handler = ButtonHandler(
         STEPPER_CAR, DEBUG_PANEL, outer_button=Button(board.D21), inner_button=Button(board.D16))
-    shadow_avoider = AvoidShadowController(
+    light_follower = LightFollower(
         STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
     keep_alive = BatteryKeepAlive(
-            STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, shadow_avoider.enabled)
-    CONTROLLERS = [keep_alive, button_control, shadow_avoider]
+            STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, light_follower.enabled)
+    CONTROLLERS = [keep_alive, button_handler, light_follower]
 
     # DC_CAR = MobilePlatform(
     #         name="DC",
