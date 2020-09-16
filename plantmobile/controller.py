@@ -234,8 +234,13 @@ class BatteryKeepAlive(Controller):
         self._last_ping = float("-inf")
 
     def perform_action(self, status: Status) -> bool:
+        if not self.enabled():
+            # Reset the counter so it will attempt to ping when enabled.
+            self._last_ping = float("-inf")
+            return False
+
         now = time.time()
-        if self.enabled() and now - self._last_ping > self.ping_interval_secs:
+        if now - self._last_ping > self.ping_interval_secs:
             logging.info("%d seconds elapsed: running keepalive ping for %.1f seconds",
                          self.ping_interval_secs, self.ping_duration_secs)
             self._last_ping = now
