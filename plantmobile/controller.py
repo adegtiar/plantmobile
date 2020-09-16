@@ -60,7 +60,6 @@ class AvoidShadowController(Controller):
     # TODO: bias towards outer
     # TODO: add smoothing
     # TODO: add rate-limiting
-    # TODO: add minimum light level
 
     def __init__(
             self,
@@ -68,7 +67,8 @@ class AvoidShadowController(Controller):
             debug_panel: DebugPanel,
             enable_button: Button,
             enabled_led: LED,
-            diff_percent_cutoff: int):
+            diff_percent_cutoff: int,
+            min_light_level: int = 20):
         assert platform.motor, "Must have motor configured"
         assert platform.light_sensors, "Must have light sensors configured"
         self.platform = platform
@@ -76,6 +76,7 @@ class AvoidShadowController(Controller):
         self.diff_percent_cutoff = diff_percent_cutoff
         self.enabled_led = enabled_led
         self.enable_button = enable_button,
+        self.min_light_level = 20
 
         enable_button.when_pressed = self.toggle_enabled
 
@@ -109,11 +110,15 @@ class AvoidShadowController(Controller):
         lux = status.lux
         if not self.enabled():
             return False
+        if max(lux.outer, lux.inner) < self.min_light_level:
+            logging.debug("Skipped shadow avoid logic: too little light (%s lux)", lux.avg)
+            return False
 
         if self.platform.get_region() is Region.UNKNOWN:
             # Initialize the position.
             self._move(Direction.OUTER)
             return True
+
         elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
             # TODO: stop on button press
             if lux.outer > lux.inner and status.region != Region.OUTER_EDGE:
