@@ -90,7 +90,7 @@ if __name__ == '__main__':
         STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
     keep_alive = BatteryKeepAlive(
             STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, shadow_avoider.enabled)
-    CONTROLLERS = [button_control, shadow_avoider, keep_alive]
+    CONTROLLERS = [keep_alive, button_control, shadow_avoider]
 
     # DC_CAR = MobilePlatform(
     #         name="DC",
