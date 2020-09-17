@@ -262,6 +262,7 @@ class ButtonHandler(Controller):
 
 
 class BatteryKeepAlive(Controller):
+    # TODO: assert that voltage increased?
 
     def __init__(self,
                  platform: MobilePlatform,

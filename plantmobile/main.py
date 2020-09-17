@@ -31,7 +31,7 @@ PRINT_INTERVAL_SECS = 0.5
 # How often to ping the battery with some current to keep it alive.
 PING_INTERVAL_SECS = 85
 # How long to trigger the battery with current during a keepalive ping.
-PING_DURATION_SECS = 0.4
+PING_DURATION_SECS = 0.5
 
 
 def setup(debug_panel: DebugPanel, platforms: Iterable[MobilePlatform]) -> List[MobilePlatform]:
