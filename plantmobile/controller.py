@@ -1,9 +1,10 @@
 import logging
 import time
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Callable, List, NoReturn, Optional
 
-from plantmobile.common import Direction, Region, Status
+from plantmobile.common import Direction, LuxReading, Region, Status
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.input_device import Button
 from plantmobile.output_device import LED, Tune
@@ -57,6 +58,13 @@ def control_loop(
 AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5", "D5"], [1, 1, 1, 2, 2])
 
 
+class LightLevel(Enum):
+    DIM = 0
+    BRIGHT = 1
+    OUTER_BRIGHTER = 2
+    INNER_BRIGHTER = 3
+
+
 class LightFollower(Controller):
     # TODO: add smoothing
     # TODO: add rate-limiting
@@ -79,6 +87,19 @@ class LightFollower(Controller):
         self.lux_threshold = lux_threshold
 
         enable_button.when_pressed = self.toggle_enabled
+
+    def _lux_compare(self, lux: LuxReading) -> LightLevel:
+        if max(lux.outer, lux.inner) < self.lux_threshold:
+            return LightLevel.DIM
+        elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
+            if lux.outer > lux.inner:
+                return LightLevel.OUTER_BRIGHTER
+            elif lux.inner > lux.outer:
+                return LightLevel.INNER_BRIGHTER
+            else:
+                assert False, "Inconsistent lux reading"
+        else:
+            return LightLevel.BRIGHT
 
     def toggle_enabled(self) -> None:
         self.enabled_led.toggle()
@@ -111,7 +132,6 @@ class LightFollower(Controller):
         self.platform.move_direction(direction, self._should_continue)
 
     def perform_action(self, status: Status) -> bool:
-        lux = status.lux
         if not self.enabled():
             return False
 
@@ -120,19 +140,18 @@ class LightFollower(Controller):
             self._move(Direction.OUTER, status)
             return True
 
-        peak_lux = max(lux.outer, lux.inner)
-        if peak_lux < self.lux_threshold:
-            logging.debug("Light below threshold: moving to inner edge (%s lux)", peak_lux)
+        light = self._lux_compare(status.lux)
+        if light is LightLevel.DIM:
+            logging.debug("Light below threshold: moving to inner edge")
             self._move(Direction.INNER, status)
-        elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
-            if lux.outer > lux.inner:
-                logging.debug("Light difference found: moving to outer edge")
-                self._move(Direction.OUTER, status)
-            elif lux.inner > lux.outer:
-                logging.debug("Light difference found: moving to inner edge")
-                self._move(Direction.INNER, status)
+        elif light is LightLevel.OUTER_BRIGHTER:
+            logging.debug("Light difference found: moving to outer edge")
+            self._move(Direction.OUTER, status)
+        elif light is LightLevel.INNER_BRIGHTER:
+            logging.debug("Light difference found: moving to inner edge")
+            self._move(Direction.INNER, status)
         else:
-            logging.debug("Light above threshold: moving to inner edge (%s lux)", peak_lux)
+            logging.debug("Light above threshold: moving to inner edge")
             self._move(Direction.OUTER, status)
         return True
 
