@@ -61,7 +61,7 @@ class Component(ABC):
 
 class Output(Component):
     @abstractmethod
-    def output_status(self, status: Status) -> None:
+    def output_status(self, status: Status, force: bool) -> None:
         pass
 
 

@@ -35,10 +35,10 @@ class DebugPanel(Output):
         for output in self.outputs:
             output.off()
 
-    def output_status(self, status: Status) -> None:
+    def output_status(self, status: Status, force: bool = False) -> None:
         """Updates the indicators and logs with the given status."""
         for output in self.outputs:
-            output.output_status(status)
+            output.output_status(status, force)
 
     def _blink(self, on: Callable, off: Callable,
                times: int, on_secs: float, off_secs: float) -> None:

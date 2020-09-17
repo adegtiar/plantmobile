@@ -27,7 +27,7 @@ class LedIndicator(Output):
     def _output_status(self, status: Status) -> None:
         pass
 
-    def output_status(self, status: Status) -> None:
+    def output_status(self, status: Status, force: bool = False) -> None:
         if status.lux.avg < LedIndicator.MIN_OUTPUT_LUX:
             self.off()
         else:

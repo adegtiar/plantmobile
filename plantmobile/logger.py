@@ -27,7 +27,7 @@ class LightCsvLogger(Output):
             self._file.close()
             self._file = None
 
-    def output_status(self, status: Status) -> None:
+    def output_status(self, status: Status, force: bool = False) -> None:
         assert self._file is not None, "must call setup() to initialize"
 
         # Timestamp truncated down to the minute
@@ -62,7 +62,7 @@ class StatusPrinter(Output):
             ("outer_lux", lambda s: s.lux.outer),
             ("inner_lux", lambda s: s.lux.inner),
             ("average_lux", lambda s: s.lux.avg),
-            ("diff", lambda s: s.lux.diff),
+            ("difference", lambda s: s.lux.diff),
             ("diff_percent", lambda s: str(s.lux.diff_percent) + '%'),
             ("position", lambda s: s.position),
             ("region", lambda s: s.region.name),
@@ -81,8 +81,8 @@ class StatusPrinter(Output):
     def off(self) -> None:
         pass
 
-    def output_status(self, status: Status) -> None:
-        if time.time() - self._last_printed_time < self.print_interval:
+    def output_status(self, status: Status, force: bool = False) -> None:
+        if not force and time.time() - self._last_printed_time < self.print_interval:
             return
 
         table = Texttable()

@@ -83,9 +83,11 @@ class LightFollower(Controller):
         self.debug_panel = debug_panel
         self.diff_percent_cutoff = diff_percent_cutoff
         self.enabled_led = enabled_led
-        self.enable_button = enable_button,
         self.lux_threshold = lux_threshold
+        self._prev_level: Optional[LightLevel] = None
 
+        # Keep the button as a field so it won't be cleaned up.
+        self._enable_button = enable_button
         enable_button.when_pressed = self.toggle_enabled
 
     def _lux_compare(self, lux: LuxReading) -> LightLevel:
@@ -116,7 +118,7 @@ class LightFollower(Controller):
 
     def _should_continue(self, status: Status) -> bool:
         # Output any status updates.
-        self.debug_panel.output_status(status)
+        self.debug_panel.output_status(status, force=True)
         return self.enabled()
 
     def _move(self, direction: Direction, status: Status) -> None:
@@ -131,6 +133,9 @@ class LightFollower(Controller):
         self._notify()
         self.platform.move_direction(direction, self._should_continue)
 
+        # If we moved, reset the prev light level since the reading is for the old position.
+        self._prev_level = None
+
     def perform_action(self, status: Status) -> bool:
         if not self.enabled():
             return False
@@ -138,21 +143,28 @@ class LightFollower(Controller):
         if self.platform.get_region() is Region.UNKNOWN:
             logging.debug("Region unknown: moving to outer edge to initialize")
             self._move(Direction.OUTER, status)
+            # TODO: handle case where we've inadvertently made it dimmer.
             return True
 
-        light = self._lux_compare(status.lux)
-        if light is LightLevel.DIM:
-            logging.debug("Light below threshold: moving to inner edge")
+        prev_level = self._prev_level
+        light_level = self._prev_level = self._lux_compare(status.lux)
+        if light_level is LightLevel.DIM:
+            logging.debug("Light dim: moving to inner edge")
             self._move(Direction.INNER, status)
-        elif light is LightLevel.OUTER_BRIGHTER:
+        elif light_level is LightLevel.OUTER_BRIGHTER:
             logging.debug("Light difference found: moving to outer edge")
             self._move(Direction.OUTER, status)
-        elif light is LightLevel.INNER_BRIGHTER:
+        elif light_level is LightLevel.INNER_BRIGHTER:
             logging.debug("Light difference found: moving to inner edge")
             self._move(Direction.INNER, status)
         else:
-            logging.debug("Light above threshold: moving to inner edge")
-            self._move(Direction.OUTER, status)
+            assert light_level is LightLevel.BRIGHT
+            if prev_level is LightLevel.INNER_BRIGHTER:
+                logging.debug("Outer light no longer brighter: moving back to OUTER edge")
+                self._move(Direction.OUTER, status)
+            elif prev_level is LightLevel.DIM:
+                logging.debug("Light passing above threshold: moving to inner edge")
+                self._move(Direction.OUTER, status)
         return True
 
 
