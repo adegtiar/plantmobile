@@ -95,6 +95,6 @@ class StatusPrinter(Output):
         col_widths = [len(elm) if type(elm) is str else 0 for elm in row]
         table.set_cols_width([max(len(h), w) for h, w in zip(self._header, col_widths)])
 
-        print(table.draw())
+        print(("\t" if force else "") + table.draw())
         self._last_printed_time = time.time()
         self._i += 1

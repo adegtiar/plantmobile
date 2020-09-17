@@ -66,6 +66,7 @@ class LightLevel(Enum):
 
 
 class LightFollower(Controller):
+    # TODO: add force print whenever decision is made?
     # TODO: add smoothing
     # TODO: add rate-limiting
 
@@ -121,11 +122,13 @@ class LightFollower(Controller):
         self.debug_panel.output_status(status, force=True)
         return self.enabled()
 
-    def _move(self, direction: Direction, status: Status) -> None:
+    def _move(self, direction: Direction, status: Status, reason: str) -> None:
         if ((direction is Direction.OUTER and status.region == Region.OUTER_EDGE)
                 or (direction is Direction.INNER and status.region == Region.INNER_EDGE)):
             # Don't try to move if we're already at the corresponding edge.
             return
+
+        logging.info("%s: moving to %s edge", reason, direction)
 
         if direction is Direction.INNER:
             assert status.region, "Region must be initialized to automatically move towards inner"
@@ -141,30 +144,30 @@ class LightFollower(Controller):
             return False
 
         if self.platform.get_region() is Region.UNKNOWN:
-            logging.debug("Region unknown: moving to outer edge to initialize")
-            self._move(Direction.OUTER, status)
+            # When the position is unknown, we move to the outer edge where the sensor can find it.
+            self._move(Direction.OUTER, status, "Initializing position")
             # TODO: handle case where we've inadvertently made it dimmer.
             return True
 
         prev_level = self._prev_level
         light_level = self._prev_level = self._lux_compare(status.lux)
         if light_level is LightLevel.DIM:
-            logging.debug("Light dim: moving to inner edge")
-            self._move(Direction.INNER, status)
+            # When dim, keep at inner edge to avoid the blinds.
+            self._move(Direction.INNER, status, "Light dimming below active threshold")
         elif light_level is LightLevel.OUTER_BRIGHTER:
-            logging.debug("Light difference found: moving to outer edge")
-            self._move(Direction.OUTER, status)
+            # Move in the direction of the the brither light.
+            self._move(Direction.OUTER, status, "Light difference found")
         elif light_level is LightLevel.INNER_BRIGHTER:
-            logging.debug("Light difference found: moving to inner edge")
-            self._move(Direction.INNER, status)
+            # Move in the direction of the the brighter light.
+            self._move(Direction.INNER, status, "Light difference found")
         else:
             assert light_level is LightLevel.BRIGHT
             if prev_level is LightLevel.INNER_BRIGHTER:
-                logging.debug("Outer light no longer brighter: moving back to OUTER edge")
-                self._move(Direction.OUTER, status)
+                # When inner is no longer brighter, the shadow is likely passing the outer edge.
+                self._move(Direction.OUTER, status, "Inner light no longer brighter")
             elif prev_level is LightLevel.DIM:
-                logging.debug("Light passing above threshold: moving to inner edge")
-                self._move(Direction.OUTER, status)
+                # When no longer dim (blinds are opened), move to outer edge for more sunlight.
+                self._move(Direction.OUTER, status, "Light rising to active threshold")
         return True
 
 
