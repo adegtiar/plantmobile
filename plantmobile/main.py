@@ -76,7 +76,7 @@ if __name__ == '__main__':
     )
 
     STEPPER_CAR = MobilePlatform(
-            name="Stepper",
+            name="StepperMobile",
             light_sensors=LightSensor(outer_pin=2, inner_pin=3),
             motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
             distance_sensor=DistanceSensor(

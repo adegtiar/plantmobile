@@ -1,6 +1,8 @@
 import numpy as np
 import time
-from typing import IO, List, Optional
+from typing import Any, Callable, IO, List, Optional, Tuple
+
+from texttable import Texttable  # type: ignore
 
 from plantmobile.common import LuxReading, Output, Status
 
@@ -55,10 +57,23 @@ class LightCsvLogger(Output):
 
 class StatusPrinter(Output):
     """Prints statuses to stdout at a configurable interval."""
+    FIELDS: List[Tuple[str, Callable[[Status], Any]]] = [
+            ("name", lambda s: s.name),
+            ("outer_lux", lambda s: s.lux.outer),
+            ("inner_lux", lambda s: s.lux.inner),
+            ("average_lux", lambda s: s.lux.avg),
+            ("diff", lambda s: s.lux.diff),
+            ("diff_percent", lambda s: str(s.lux.diff_percent) + '%'),
+            ("position", lambda s: s.position),
+            ("region", lambda s: s.region.name),
+            ("motor voltage", lambda s: s.motor_voltage),
+    ]
 
     def __init__(self, print_interval: float = 0) -> None:
         self.print_interval = print_interval
         self._last_printed_time = float("-inf")
+        self._header = [field[0] for field in StatusPrinter.FIELDS]
+        self._i = 0
 
     def setup(self) -> None:
         pass
@@ -70,14 +85,16 @@ class StatusPrinter(Output):
         if time.time() - self._last_printed_time < self.print_interval:
             return
 
-        print("name:\t\t", status.name)
-        print("outer_lux:\t", status.lux.outer)
-        print("inner_lux:\t", status.lux.inner)
-        print("average_lux:\t", status.lux.avg)
-        print("diff:\t\t", status.lux.diff)
-        print("diff percent:\t {}%".format(status.lux.diff_percent))
-        print("position:\t", status.position)
-        print("region:\t\t",  status.region)
-        print("motor voltage:\t {:.3f}".format(status.motor_voltage))
-        print()
+        table = Texttable()
+        table.set_deco(Texttable.HEADER)
+        if self._i % 20 == 0:
+            table.header(self._header)
+
+        row = [field[1](status) for field in StatusPrinter.FIELDS]
+        table.add_row(row)
+        col_widths = [len(elm) if type(elm) is str else 0 for elm in row]
+        table.set_cols_width([max(len(h), w) for h, w in zip(self._header, col_widths)])
+
+        print(table.draw())
         self._last_printed_time = time.time()
+        self._i += 1
