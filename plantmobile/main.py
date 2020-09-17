@@ -27,7 +27,7 @@ from plantmobile.platform_driver import MobilePlatform
 # How different one sensor has to be from the average to trigger a move.
 DIFF_PERCENT_CUTOFF = 30
 # How often the status is printer to stdout.
-PRINT_INTERVAL_SECS = 0.5
+PRINT_INTERVAL_SECS = 2.5
 # How often to ping the battery with some current to keep it alive.
 PING_INTERVAL_SECS = 85
 # How long to trigger the battery with current during a keepalive ping.
