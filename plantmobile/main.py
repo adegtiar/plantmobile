@@ -88,6 +88,7 @@ if __name__ == '__main__':
         STEPPER_CAR, DEBUG_PANEL, outer_button=Button(board.D21), inner_button=Button(board.D16))
     light_follower = LightFollower(
         STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
+    light_follower.toggle_enabled()
     keep_alive = BatteryKeepAlive(
             STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, light_follower.enabled)
     CONTROLLERS = [keep_alive, button_handler, light_follower]
