@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
+import adafruit_tsl2561  # type: ignore
 import board
 import busio
-from adafruit_tsl2561 import TSL2561  # type: ignore
 from adafruit_tca9548a import TCA9548A  # type: ignore
 from numpy import mean
 
@@ -11,6 +12,18 @@ from plantmobile.common import Input, LuxReading
 
 
 DIFF_PERCENT_CUTOFF = 30
+
+
+class TSL2561(adafruit_tsl2561.TSL2561):
+
+    @property
+    def chip_id(self):  # type: ignore
+        partno, revno = super(TSL2561, self).chip_id
+        if partno == 0x4:
+            # This needs to be overridden for off-brand TSL2561 sensors like HiLetgo.
+            logging.warning("Invalid partno 0x4 for TSL2561 chip. Passing fake partno into lib.")
+            partno = 0x5
+        return partno, revno
 
 
 class LightSensor(Input):
@@ -29,8 +42,8 @@ class LightSensor(Input):
         assert all(0 <= pin <= 7 for pin in (outer_pin, inner_pin)), "mux pin must be 0-7."
         self.outer_pin = outer_pin
         self.inner_pin = inner_pin
-        self._outer_tsl = None
-        self._inner_tsl = None
+        self._outer_tsl: Optional[TSL2561] = None
+        self._inner_tsl: Optional[TSL2561] = None
 
     def setup(self) -> None:
         # For each sensor, create it using the TCA9548A channel acting as an I2C object.
