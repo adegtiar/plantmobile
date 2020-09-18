@@ -143,10 +143,16 @@ class LightFollower(Controller):
         if not self.enabled():
             return False
 
+        old_lux = status.lux.avg
         if self.platform.get_region() is Region.UNKNOWN:
             # When the position is unknown, we move to the outer edge where the sensor can find it.
             self._move(Direction.OUTER, status, "Initializing position")
-            # TODO: handle case where we've inadvertently made it dimmer.
+            status = self.platform.get_status()
+            new_lux = status.lux.avg
+            if new_lux < old_lux:
+                # Undo our initialization move if brightness got worse.
+                reason = "Old lux {} was higher than lux {} at outer edge".format(old_lux, new_lux)
+                self._move(Direction.INNER, status, reason)
             return True
 
         prev_level = self._prev_level
