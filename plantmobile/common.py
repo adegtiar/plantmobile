@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Optional, NamedTuple
+from typing import Any, List, Optional, NamedTuple
 
+import numpy as np
 from adafruit_blinka.microcontroller.bcm283x.pin import Pin  # type: ignore # noqa
 
 # A reading of light sensor data.
@@ -10,6 +11,37 @@ LuxReading = NamedTuple('LuxReading', [
     ('outer', int), ('inner', int), ('avg', int), ('diff', int),
     ('diff_percent', int), ('timestamp', datetime),
 ])
+
+
+class LuxAggregator(object):
+
+    def __init__(self) -> None:
+        self._luxes: List[LuxReading] = []
+
+    def add(self, lux: LuxReading) -> None:
+        self._luxes.append(lux)
+
+    def average(self) -> LuxReading:
+        return LuxReading(
+            self._int_avg('outer'),
+            self._int_avg('inner'),
+            self._int_avg('avg'),
+            self._int_avg('diff'),
+            self._int_avg('diff_percent'),
+            self._timestamp_avg())
+
+    def clear(self) -> None:
+        self._luxes.clear()
+
+    def _int_avg(self, field: str) -> int:
+        field_values = [getattr(lux, field) for lux in self._luxes]
+        assert all(type(val) is int for val in field_values)
+        return int(np.mean(field_values))
+
+    def _timestamp_avg(self) -> datetime:
+        dates = [lux.timestamp for lux in self._luxes]
+        ref_date = datetime(1900, 1, 1)
+        return ref_date + sum([date - ref_date for date in dates], timedelta()) / len(dates)
 
 
 class Region(Enum):
