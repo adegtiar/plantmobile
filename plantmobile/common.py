@@ -43,6 +43,9 @@ class LuxAggregator(object):
         ref_date = datetime(1900, 1, 1)
         return ref_date + sum([date - ref_date for date in dates], timedelta()) / len(dates)
 
+    def __len__(self) -> int:
+        return len(self._luxes)
+
 
 class Region(Enum):
     """Indicates the region of the table corresponding to the position."""

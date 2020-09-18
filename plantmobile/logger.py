@@ -4,7 +4,7 @@ from typing import Any, Callable, IO, List, Optional, Tuple
 
 from texttable import Texttable  # type: ignore
 
-from plantmobile.common import LuxReading, Output, Status
+from plantmobile.common import LuxAggregator, LuxReading, Output, Status
 
 
 class LightCsvLogger(Output):
@@ -16,7 +16,7 @@ class LightCsvLogger(Output):
         self.filename = filename
         self._file: Optional[IO] = None
         self._cur_timestamp: Optional[str] = None
-        self._cur_timestamp_luxes: List[LuxReading] = []
+        self._cur_timestamp_luxes = LuxAggregator()
 
     def setup(self) -> None:
         if self._file is None:
@@ -40,18 +40,17 @@ class LightCsvLogger(Output):
             # We've moved past a minute boundary.
             assert self._cur_timestamp_luxes, "Timestamp with no lux data?"
             # We've buffered readings. Output them now.
-            outer_avg = int(np.mean([lux.outer for lux in self._cur_timestamp_luxes]))
-            inner_avg = int(np.mean([lux.inner for lux in self._cur_timestamp_luxes]))
-            log_line = "{},{},{}\n".format(self._cur_timestamp, outer_avg, inner_avg)
+            avg_lux = self._cur_timestamp_luxes.average()
+            log_line = "{},{},{}\n".format(self._cur_timestamp, avg_lux.outer, avg_lux.inner)
             self._file.write(log_line)
             self._file.flush()
 
             # Reset data for the new timestamp.
             self._cur_timestamp = timestamp
-            self._cur_timestamp_luxes = []
+            self._cur_timestamp_luxes.clear()
 
         # Add another reading to aggregate within the same minute.
-        self._cur_timestamp_luxes.append(status.lux)
+        self._cur_timestamp_luxes.add(status.lux)
         return
 
 
