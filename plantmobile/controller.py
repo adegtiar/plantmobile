@@ -86,6 +86,7 @@ class LightFollower(Controller):
         self.enabled_led = enabled_led
         self.lux_threshold = lux_threshold
         self._prev_level: Optional[LightLevel] = None
+        self._i = 0
 
         # Keep the button as a field so it won't be cleaned up.
         self._enable_button = enable_button
@@ -119,7 +120,8 @@ class LightFollower(Controller):
 
     def _should_continue(self, status: Status) -> bool:
         # Output any status updates.
-        self.debug_panel.output_status(status, force=True)
+        self.debug_panel.output_status(status, force=self._i % 10 == 0)
+        self._i += 1
         return self.enabled()
 
     def _move(self, direction: Direction, status: Status, reason: str) -> None:
@@ -134,6 +136,7 @@ class LightFollower(Controller):
             assert status.region, "Region must be initialized to automatically move towards inner"
 
         self._notify()
+        self._i = 0
         self.platform.move_direction(direction, self._should_continue)
 
         # If we moved, reset the prev light level since the reading is for the old position.
