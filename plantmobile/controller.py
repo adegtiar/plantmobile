@@ -65,7 +65,7 @@ class LightLevel(Enum):
     INNER_BRIGHTER = 3
 
 
-class LightFollower(Controller):
+class ShadowAvoider(Controller):
     # TODO: add force print whenever decision is made?
     # TODO: add smoothing
     # TODO: add rate-limiting
