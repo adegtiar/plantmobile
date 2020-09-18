@@ -1,10 +1,9 @@
-import numpy as np
 import time
 from typing import Any, Callable, IO, List, Optional, Tuple
 
 from texttable import Texttable  # type: ignore
 
-from plantmobile.common import LuxAggregator, LuxReading, Output, Status
+from plantmobile.common import LuxAggregator, Output, Status
 
 
 class LightCsvLogger(Output):
