@@ -126,11 +126,18 @@ class ShadowAvoider(Controller):
         self._i += 1
         return self.enabled()
 
-    def _move(self, direction: Direction, region: Region, lux: LuxReading, reason: str) -> None:
+    def _move(
+            self,
+            direction: Direction,
+            region: Region,
+            lux: LuxReading,
+            reason: str,
+            steps: Optional[int] = None) -> int:
+
         if ((direction is Direction.OUTER and region == Region.OUTER_EDGE)
                 or (direction is Direction.INNER and region == Region.INNER_EDGE)):
             # Don't try to move if we're already at the corresponding edge.
-            return
+            return 0
 
         logging.info("Ran analysis on lux %s", lux)
         logging.info("%s: moving to %s edge", reason, direction)
@@ -140,10 +147,11 @@ class ShadowAvoider(Controller):
 
         self._notify()
         self._i = 0
-        self.platform.move_direction(direction, self._should_continue)
+        steps = self.platform.move_direction(direction, self._should_continue, steps)
 
         # If we moved, reset the prev light level since the reading is for the old position.
         self._prev_level = None
+        return steps
 
     def perform_action(self, status: Status) -> bool:
         # Add the current lux to the running average.
@@ -168,7 +176,7 @@ class ShadowAvoider(Controller):
 
         if self.platform.get_region() is Region.UNKNOWN:
             # When the position is unknown, we move to the outer edge where the sensor can find it.
-            self._move(Direction.OUTER, cur_region, lux, "Initializing position")
+            steps = self._move(Direction.OUTER, cur_region, lux, "Initializing position")
 
             old_avg = lux.avg
             new_status = self.platform.get_status()
@@ -176,7 +184,7 @@ class ShadowAvoider(Controller):
             if new_avg < old_avg:
                 # Undo our initialization move if average brightness got worse.
                 reason = "Old lux {} was higher than lux {} at outer edge".format(old_avg, new_avg)
-                self._move(Direction.INNER, new_status.region, lux, reason)
+                self._move(Direction.INNER, new_status.region, lux, reason, steps)
             return True
 
         logging.debug("Running light analysis with averaged lux: %s", lux)

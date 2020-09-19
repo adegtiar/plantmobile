@@ -10,6 +10,8 @@ from plantmobile.output_device import StepperMotor
 STEPS_PER_MOVE = 7
 # A voltage reading below this will abort motor movement and display an error.
 MOTOR_VOLTAGE_CUTOFF = 4.0
+# The max distance to travel, with a buffer to account for imprecision.
+MAX_DISTANCE = int(Region.size() * 1.1)
 
 
 class BatteryError(Exception):
@@ -102,14 +104,16 @@ class MobilePlatform(Component):
         return status.motor_voltage is not None and status.motor_voltage < MOTOR_VOLTAGE_CUTOFF
 
     def move_direction(self,
-                       direction: Direction, should_continue: Callable[[Status], bool]) -> None:
+                       direction: Direction,
+                       should_continue: Callable[[Status], bool],
+                       steps: Optional[int] = None) -> int:
         assert self.motor, "motor must be configured"
 
         logging.info("starting sequence move towards %s", direction)
         stop_fmt = "stopping sequence move towards {}: %s (%d steps)".format(direction)
 
         # Move at most the region size, with a small error buffer to bias towards the outer edge.
-        max_distance = int(Region.size() * 1.1)
+        max_distance = steps or MAX_DISTANCE
 
         for steps in range(max_distance+1):
             # When moving towards the outer edge, cross-check with the sensor in case we've drifted.
@@ -120,20 +124,21 @@ class MobilePlatform(Component):
                 raise BatteryError()
             elif not should_continue(status):
                 logging.info(stop_fmt, "stopped", steps)
-                return
+                break
             elif status.region is direction.extreme_edge:
                 logging.info(stop_fmt, "at edge", steps)
-                return
+                break
             elif steps == max_distance:
                 # Terminate with an explicit check to run edge check first.
-                logging.warning(stop_fmt, "travelled max distance without reaching edge", steps)
-                return
+                if steps == MAX_DISTANCE:
+                    logging.warning(stop_fmt, "travelled max distance without reaching edge", steps)
+                break
             else:
                 self.motor.move_steps(direction.motor_rotation, STEPS_PER_MOVE)
                 # Update the internal position, if it's already been intialized.
                 if self.position is not None:
                     self.position += direction.value
-        assert False, "should terminate within the loop"
+        return steps
 
     def ping_motor(self, status: Status, duration_secs: float) -> None:
         if self.voltage_low(status):
