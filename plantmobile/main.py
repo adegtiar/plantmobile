@@ -13,13 +13,13 @@ from plantmobile.controller import (
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
 from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageMeter
+from plantmobile.motor import StepperMotor
 from plantmobile.output_device import (
         DirectionalLeds,
         LED,
         LedBarGraphs,
         LuxDiffDisplay,
         PositionDisplay,
-        StepperMotor,
         TonalBuzzer,
 )
 from plantmobile.platform_driver import MobilePlatform

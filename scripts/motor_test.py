@@ -5,7 +5,8 @@ from typing import NoReturn
 import board
 import RPi.GPIO as GPIO
 
-from plantmobile.output_device import LED, StepperMotor
+from plantmobile.motor import StepperMotor
+from plantmobile.output_device import LED
 from plantmobile.common import Rotation
 from plantmobile.input_device import Button
 

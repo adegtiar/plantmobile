@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from plantmobile.common import Component, Direction, Region, Status
 from plantmobile.input_device import DistanceSensor, LightSensor, VoltageMeter
-from plantmobile.output_device import StepperMotor
+from plantmobile.motor import StepperMotor
 
 # Number of steps in a single movement unit between sensor checks.
 STEPS_PER_MOVE = 7

@@ -190,6 +190,7 @@ class ShadowAvoider(Controller):
             new_avg = new_status.lux.avg
             if new_avg < old_avg:
                 # Undo our initialization move if average brightness got worse.
+                # TODO: this is finicky... can we fix it?
                 reason = "Old lux {} was higher than lux {} at outer edge".format(old_avg, new_avg)
                 self.status_printer.reset()
                 self._move(Direction.INNER, new_status.region, lux, reason, steps)
