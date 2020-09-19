@@ -7,6 +7,7 @@ from typing import Callable, List, NoReturn, Optional
 from plantmobile.common import Direction, LuxAggregator, LuxReading, Region, Status
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.input_device import Button
+from plantmobile.logger import StatusPrinter
 from plantmobile.output_device import LED, Tune
 from plantmobile.platform_driver import BatteryError, MobilePlatform
 
@@ -27,6 +28,7 @@ class Controller(ABC):
 def control_loop(
         platform: MobilePlatform,
         debug_panel: DebugPanel,
+        status_printer: StatusPrinter,
         controllers: List[Controller]) -> NoReturn:
     """Runs the control loop for a platform.
 
@@ -40,6 +42,7 @@ def control_loop(
     while True:
         status = platform.get_status()
         debug_panel.output_status(status)
+        status_printer.output_status(status)
 
         # TODO: refactor in terms of steps/changes?
         try:
@@ -71,6 +74,7 @@ class ShadowAvoider(Controller):
             self,
             platform: MobilePlatform,
             debug_panel: DebugPanel,
+            status_printer: StatusPrinter,
             enable_button: Button,
             enabled_led: LED,
             diff_percent_cutoff: int,
@@ -81,6 +85,7 @@ class ShadowAvoider(Controller):
         assert platform.light_sensors, "Must have light sensors configured"
         self.platform = platform
         self.debug_panel = debug_panel
+        self.status_printer = status_printer
         self.diff_percent_cutoff = diff_percent_cutoff
         self.enabled_led = enabled_led
         self.lux_threshold = lux_threshold
@@ -122,7 +127,9 @@ class ShadowAvoider(Controller):
 
     def _should_continue(self, status: Status) -> bool:
         # Output any status updates.
-        self.debug_panel.output_status(status, force=self._i % 10 == 0)
+        self.debug_panel.output_status(status)
+        if self._i % 10 == 0:
+            self.status_printer.output_status(status, force=True)
         self._i += 1
         return self.enabled()
 
@@ -184,6 +191,7 @@ class ShadowAvoider(Controller):
             if new_avg < old_avg:
                 # Undo our initialization move if average brightness got worse.
                 reason = "Old lux {} was higher than lux {} at outer edge".format(old_avg, new_avg)
+                self.status_printer.reset()
                 self._move(Direction.INNER, new_status.region, lux, reason, steps)
             return True
 
@@ -221,11 +229,13 @@ class ButtonHandler(Controller):
     def __init__(self,
                  platform: MobilePlatform,
                  debug_panel: DebugPanel,
+                 status_printer: StatusPrinter,
                  outer_button: Button,
                  inner_button: Button,
                  hold_button_threshold_secs: float = 0.1) -> None:
         self.platform = platform
         self.debug_panel = debug_panel
+        self.status_printer = status_printer
         for button in (outer_button, inner_button):
             button.when_pressed = self._on_press
             button.when_held = self._on_hold
@@ -236,6 +246,7 @@ class ButtonHandler(Controller):
         # In hold mode, hold the button down for movement.
         self._hold_mode = True
         self._direction_commanded: Optional[Direction] = None
+        self._i = 0
 
     def _on_press(self, button: Button) -> None:
         # This logic controller the non-hold mode.
@@ -288,6 +299,9 @@ class ButtonHandler(Controller):
     def _should_continue(self, direction_commanded: Direction) -> Callable[[Status], bool]:
         def should_continue(status: Status) -> bool:
             self.debug_panel.output_status(status)
+            if self._i % 10 == 0:
+                self.status_printer.output_status(status, force=True)
+            self._i += 1
             return self._direction_commanded is direction_commanded
         return should_continue
 
@@ -295,6 +309,7 @@ class ButtonHandler(Controller):
         direction = self._direction_commanded
         if direction:
             try:
+                self._i = 0
                 self.platform.move_direction(direction, self._should_continue(direction))
                 return True
             finally:

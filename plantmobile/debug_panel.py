@@ -2,6 +2,7 @@ import time
 from typing import Callable, Optional, no_type_check
 
 from plantmobile.common import Output, Status
+from plantmobile.logger import StatusPrinter
 from plantmobile.output_device import TonalBuzzer, DirectionalLeds, PositionDisplay
 
 # The tone to buzz on motor error.
@@ -15,11 +16,14 @@ class DebugPanel(Output):
 
         self.direction_leds = None
         self.position_display = None
+        self.status_printer = None
         for output in outputs:
             if isinstance(output, PositionDisplay):
                 self.position_display = output
             elif isinstance(output, DirectionalLeds):
                 self.direction_leds = output
+            elif isinstance(output, StatusPrinter):
+                self.status_printer = output
 
     def setup(self) -> None:
         """Initialize all components of the debug panel.
@@ -35,10 +39,10 @@ class DebugPanel(Output):
         for output in self.outputs:
             output.off()
 
-    def output_status(self, status: Status, force: bool = False) -> None:
+    def output_status(self, status: Status) -> None:
         """Updates the indicators and logs with the given status."""
         for output in self.outputs:
-            output.output_status(status, force)
+            output.output_status(status)
 
     def _blink(self, on: Callable, off: Callable,
                times: int, on_secs: float, off_secs: float) -> None:

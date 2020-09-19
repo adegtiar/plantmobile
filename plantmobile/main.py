@@ -71,9 +71,9 @@ if __name__ == '__main__':
                 min_level=500, max_level=30000),
             LuxDiffDisplay(clock_pin=board.D6, data_pin=board.D13),
             PositionDisplay(clock_pin=board.D19, data_pin=board.D26),
-            StatusPrinter(print_interval=PRINT_INTERVAL_SECS),
             buzzer=TonalBuzzer(board.D18),
     )
+    STATUS_PRINTER = StatusPrinter(print_interval=PRINT_INTERVAL_SECS)
 
     STEPPER_CAR = MobilePlatform(
             name="StepperMobile",
@@ -85,9 +85,11 @@ if __name__ == '__main__':
     )
 
     button_handler = ButtonHandler(
-        STEPPER_CAR, DEBUG_PANEL, outer_button=Button(board.D21), inner_button=Button(board.D16))
+        STEPPER_CAR, DEBUG_PANEL, STATUS_PRINTER,
+        outer_button=Button(board.D21), inner_button=Button(board.D16))
     light_follower = ShadowAvoider(
-        STEPPER_CAR, DEBUG_PANEL, Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
+        STEPPER_CAR, DEBUG_PANEL, STATUS_PRINTER,
+        Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
     light_follower.toggle_enabled()
     keep_alive = BatteryKeepAlive(
             STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, light_follower.enabled)
@@ -105,7 +107,7 @@ if __name__ == '__main__':
         print("No working platforms to run. Exiting.")
         sys.exit(1)
     try:
-        control_loop(working_platforms[0], DEBUG_PANEL, CONTROLLERS)
+        control_loop(working_platforms[0], DEBUG_PANEL, STATUS_PRINTER, CONTROLLERS)
     except KeyboardInterrupt:
         print("Stopping...")
     finally:

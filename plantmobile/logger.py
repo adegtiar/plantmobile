@@ -53,7 +53,7 @@ class LightCsvLogger(Output):
         return
 
 
-class StatusPrinter(Output):
+class StatusPrinter(object):
     """Prints statuses to stdout at a configurable interval."""
     FIELDS: List[Tuple[str, Callable[[Status], Any]]] = [
             ("name", lambda s: s.name),
@@ -69,15 +69,13 @@ class StatusPrinter(Output):
 
     def __init__(self, print_interval: float = 0) -> None:
         self.print_interval = print_interval
-        self._last_printed_time = float("-inf")
         self._header = [field[0] for field in StatusPrinter.FIELDS]
+        self._was_forced = False
+        self.reset()
+
+    def reset(self) -> None:
         self._i = 0
-
-    def setup(self) -> None:
-        pass
-
-    def off(self) -> None:
-        pass
+        self._last_printed_time = float("-inf")
 
     def output_status(self, status: Status, force: bool = False) -> None:
         if not force and time.time() - self._last_printed_time < self.print_interval:
@@ -85,7 +83,7 @@ class StatusPrinter(Output):
 
         table = Texttable()
         table.set_deco(Texttable.HEADER)
-        if self._i % 20 == 0:
+        if self._i % 20 == 0 or (force ^ self._was_forced):
             table.header(self._header)
 
         row = [field[1](status) for field in StatusPrinter.FIELDS]
@@ -93,6 +91,10 @@ class StatusPrinter(Output):
         col_widths = [len(elm) if type(elm) is str else 0 for elm in row]
         table.set_cols_width([max(len(h), w) for h, w in zip(self._header, col_widths)])
 
-        print(("\t" if force else "") + table.draw())
+        output = table.draw()
+        if force:
+            output = '\t' + output.replace('\n', '\n\t')
+        print(output)
         self._last_printed_time = time.time()
         self._i += 1
+        self._was_forced = force
