@@ -12,7 +12,7 @@ from plantmobile.controller import (
 )
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
-from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageReader
+from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageMeter
 from plantmobile.output_device import (
         DirectionalLeds,
         LED,
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
             distance_sensor=DistanceSensor(
                 trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10, timeout=0.05),
-            voltage_reader=VoltageReader(analog_pin=0, r1=100, r2=100),
+            voltage_reader=VoltageMeter(analog_pin=0, r1=100, r2=100),
     )
 
     button_handler = ButtonHandler(

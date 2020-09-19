@@ -3,7 +3,7 @@ import time
 from typing import Callable, Optional
 
 from plantmobile.common import Component, Direction, Region, Status
-from plantmobile.input_device import DistanceSensor, LightSensor, VoltageReader
+from plantmobile.input_device import DistanceSensor, LightSensor, VoltageMeter
 from plantmobile.output_device import StepperMotor
 
 # Number of steps in a single movement unit between sensor checks.
@@ -24,7 +24,7 @@ class MobilePlatform(Component):
                  light_sensors: LightSensor,
                  motor: Optional[StepperMotor] = None,
                  distance_sensor: Optional[DistanceSensor] = None,
-                 voltage_reader: Optional[VoltageReader] = None) -> None:
+                 voltage_reader: Optional[VoltageMeter] = None) -> None:
         self.name = name
         self.light_sensors = light_sensors
         self.motor = motor
