@@ -6,6 +6,8 @@ from typing import Any, List, Optional, NamedTuple
 import numpy as np
 from adafruit_blinka.microcontroller.bcm283x.pin import Pin  # type: ignore # noqa
 
+# TODO: make into a package
+
 # A reading of light sensor data.
 LuxReading = NamedTuple('LuxReading', [
     ('outer', int), ('inner', int), ('avg', int), ('diff', int),
@@ -45,6 +47,12 @@ class LuxAggregator(object):
 
     def __len__(self) -> int:
         return len(self._luxes)
+
+
+def get_diff_percent(outer: int, inner: int) -> int:
+    avg = int(np.mean((outer, inner)))
+    diff = inner - outer
+    return int(diff/avg * 100) if avg else 0
 
 
 class Region(Enum):

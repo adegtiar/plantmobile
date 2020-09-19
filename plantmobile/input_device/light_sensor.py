@@ -5,10 +5,10 @@ from typing import Optional
 import adafruit_tsl2561  # type: ignore
 import board
 import busio
+import numpy as np
 from adafruit_tca9548a import TCA9548A  # type: ignore
-from numpy import mean
 
-from plantmobile.common import Input, LuxReading
+from plantmobile.common import get_diff_percent, Input, LuxReading
 
 
 DIFF_PERCENT_CUTOFF = 30
@@ -76,7 +76,7 @@ class LightSensor(Input):
         outer = self._outer_tsl.infrared
         inner = self._inner_tsl.infrared
         timestamp = datetime.now()
-        avg = int(mean((outer, inner)))
+        avg = int(np.mean((outer, inner)))
         diff = inner - outer
-        diff_percent = int(diff/avg * 100) if avg else 0
+        diff_percent = get_diff_percent(outer, inner)
         return LuxReading(outer, inner, avg, diff, diff_percent, timestamp)

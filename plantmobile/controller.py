@@ -4,7 +4,9 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, List, NoReturn, Optional
 
-from plantmobile.common import Direction, LuxAggregator, LuxReading, Region, Status
+from plantmobile.common import (
+        Direction, get_diff_percent, LuxAggregator, LuxReading, Region, Status,
+)
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.input_device import Button
 from plantmobile.logger import StatusPrinter
@@ -188,9 +190,10 @@ class ShadowAvoider(Controller):
             old_avg = lux.avg
             new_status = self.platform.get_status()
             new_avg = new_status.lux.avg
-            if new_avg < old_avg:
+            # Reuse the same logic as difference between outer and inner sensors.
+            if get_diff_percent(new_avg, old_avg) >= self.diff_percent_cutoff:
                 # Undo our initialization move if average brightness got worse.
-                # TODO: this is finicky... can we fix it?
+                # TODO: this is finicky... can we fix it? Maybe move into main loop.
                 reason = "Old lux {} was higher than lux {} at outer edge".format(old_avg, new_avg)
                 self.status_printer.reset()
                 self._move(Direction.INNER, new_status.region, lux, reason, steps)
