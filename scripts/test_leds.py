@@ -3,7 +3,6 @@ import logging
 import time
 
 import board
-import RPi.GPIO as GPIO
 
 from plantmobile.output_device import LedBarGraphs
 
@@ -28,4 +27,4 @@ if __name__ == '__main__':
                 time.sleep(.5)
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         graphs.off()
-        GPIO.cleanup()
+        # GPIO cleanup handled by gpiozero.
