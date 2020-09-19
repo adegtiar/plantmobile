@@ -150,6 +150,7 @@ class ShadowAvoider(Controller):
         self._lux_agg.add(status.lux)
 
         # TODO: consider doing a running aggregation for a consistent time response time.
+        # NOTE: this would also fix the issue with ignoring time spent on button handler.
         if time.time() - self._last_run_time < self._run_interval_secs:
             return False
 

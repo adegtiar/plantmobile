@@ -47,7 +47,6 @@ def control_loop(
 
 
 if __name__ == '__main__':
-    # TODO: move this to a separate script
     print('Program is starting...')
     print('BLUE button towards outer, RED towards inner')
     GPIO.setmode(GPIO.BCM)
