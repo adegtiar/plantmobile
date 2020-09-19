@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import sys
 
@@ -10,8 +9,8 @@ from adafruit_ads1x15.analog_in import AnalogIn  # type: ignore
 from plantmobile.common import Input
 
 
-class VoltageReader(Input):
-    """A voltage reader which uses the ADS1115 ADC.
+class VoltageMeter(Input):
+    """A voltage meter which uses the ADS1115 ADC.
 
     Resistor values can be specified to calculate the source voltage
     assuming you have a voltage divider set up of Vs~r1~ADC~r2~GND.
@@ -42,10 +41,3 @@ class VoltageReader(Input):
     def read(self) -> float:
         assert self._chan, "Must call setup before reading"
         return self._chan.voltage * self._voltage_multipler
-
-
-if __name__ == '__main__':
-    # TODO: move this to a separate script
-    voltage_reader = VoltageReader(r1=100, r2=100)
-    voltage_reader.setup()
-    print(voltage_reader.read())

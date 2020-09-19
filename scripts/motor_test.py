@@ -5,7 +5,7 @@ from typing import NoReturn
 import board
 import RPi.GPIO as GPIO
 
-from plantmobile.output import LED, StepperMotor
+from plantmobile.output_device import LED, StepperMotor
 from plantmobile.common import Rotation
 from plantmobile.input_device import Button
 
@@ -60,4 +60,4 @@ if __name__ == '__main__':
                red_button=Button(board.D16), red_led=LED(board.D12))
     except KeyboardInterrupt:  # Press ctrl-c to end the program.
         MOTOR.off()
-        GPIO.cleanup()
+        # GPIO cleanup handled by gpiozero.
