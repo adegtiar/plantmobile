@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Callable, List, NoReturn, Optional
 
-from plantmobile.common import Direction, LuxReading, Region, Status
+from plantmobile.common import Direction, LuxAggregator, LuxReading, Region, Status
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.input_device import Button
 from plantmobile.output_device import LED, Tune
@@ -66,9 +66,6 @@ class LightLevel(Enum):
 
 
 class ShadowAvoider(Controller):
-    # TODO: add force print whenever decision is made?
-    # TODO: add smoothing
-    # TODO: add rate-limiting
 
     def __init__(
             self,
@@ -77,7 +74,9 @@ class ShadowAvoider(Controller):
             enable_button: Button,
             enabled_led: LED,
             diff_percent_cutoff: int,
-            lux_threshold: int = 500):
+            lux_threshold: int = 500,
+            run_interval_secs: float = 10,
+            ):
         assert platform.motor, "Must have motor configured"
         assert platform.light_sensors, "Must have light sensors configured"
         self.platform = platform
@@ -86,6 +85,9 @@ class ShadowAvoider(Controller):
         self.enabled_led = enabled_led
         self.lux_threshold = lux_threshold
         self._prev_level: Optional[LightLevel] = None
+        self._run_interval_secs = run_interval_secs
+        self._last_run_time = float("-inf")
+        self._lux_agg = LuxAggregator()
         self._i = 0
 
         # Keep the button as a field so it won't be cleaned up.
@@ -124,16 +126,17 @@ class ShadowAvoider(Controller):
         self._i += 1
         return self.enabled()
 
-    def _move(self, direction: Direction, status: Status, reason: str) -> None:
-        if ((direction is Direction.OUTER and status.region == Region.OUTER_EDGE)
-                or (direction is Direction.INNER and status.region == Region.INNER_EDGE)):
+    def _move(self, direction: Direction, region: Region, lux: LuxReading, reason: str) -> None:
+        if ((direction is Direction.OUTER and region == Region.OUTER_EDGE)
+                or (direction is Direction.INNER and region == Region.INNER_EDGE)):
             # Don't try to move if we're already at the corresponding edge.
             return
 
+        logging.info("Ran analysis on lux %s", lux)
         logging.info("%s: moving to %s edge", reason, direction)
 
         if direction is Direction.INNER:
-            assert status.region, "Region must be initialized to automatically move towards inner"
+            assert region, "Region must be initialized to automatically move towards inner"
 
         self._notify()
         self._i = 0
@@ -143,40 +146,59 @@ class ShadowAvoider(Controller):
         self._prev_level = None
 
     def perform_action(self, status: Status) -> bool:
+        # Add the current lux to the running average.
+        self._lux_agg.add(status.lux)
+
+        # TODO: consider doing a running aggregation for a consistent time response time.
+        if time.time() - self._last_run_time < self._run_interval_secs:
+            return False
+
+        # Get the average lux over the configured aggregation interval.
+        agg_lux = self._lux_agg.average()
+        self._lux_agg.clear()
+        try:
+            return self._perform_action(agg_lux, status.region)
+        finally:
+            self._last_run_time = time.time()
+
+    def _perform_action(self, lux: LuxReading, cur_region: Region) -> bool:
         if not self.enabled():
             return False
 
-        old_lux = status.lux.avg
         if self.platform.get_region() is Region.UNKNOWN:
             # When the position is unknown, we move to the outer edge where the sensor can find it.
-            self._move(Direction.OUTER, status, "Initializing position")
-            status = self.platform.get_status()
-            new_lux = status.lux.avg
-            if new_lux < old_lux:
-                # Undo our initialization move if brightness got worse.
-                reason = "Old lux {} was higher than lux {} at outer edge".format(old_lux, new_lux)
-                self._move(Direction.INNER, status, reason)
+            self._move(Direction.OUTER, cur_region, lux, "Initializing position")
+
+            old_avg = lux.avg
+            new_status = self.platform.get_status()
+            new_avg = new_status.lux.avg
+            if new_avg < old_avg:
+                # Undo our initialization move if average brightness got worse.
+                reason = "Old lux {} was higher than lux {} at outer edge".format(old_avg, new_avg)
+                self._move(Direction.INNER, new_status.region, lux, reason)
             return True
 
+        logging.debug("Running light analysis with averaged lux: %s", lux)
         prev_level = self._prev_level
-        light_level = self._prev_level = self._lux_compare(status.lux)
+        light_level = self._prev_level = self._lux_compare(lux)
+        logging.debug("Prev light level: %s, New light level: %s", prev_level, light_level)
         if light_level is LightLevel.DIM:
             # When dim, keep at inner edge to avoid the blinds.
-            self._move(Direction.INNER, status, "Light dimming below active threshold")
+            self._move(Direction.INNER, cur_region, lux, "Light dimming below active threshold")
         elif light_level is LightLevel.OUTER_BRIGHTER:
             # Move in the direction of the the brither light.
-            self._move(Direction.OUTER, status, "Light difference found")
+            self._move(Direction.OUTER, cur_region, lux, "Light difference found")
         elif light_level is LightLevel.INNER_BRIGHTER:
             # Move in the direction of the the brighter light.
-            self._move(Direction.INNER, status, "Light difference found")
+            self._move(Direction.INNER, cur_region, lux, "Light difference found")
         else:
             assert light_level is LightLevel.BRIGHT
             if prev_level is LightLevel.INNER_BRIGHTER:
                 # When inner is no longer brighter, the shadow is likely passing the outer edge.
-                self._move(Direction.OUTER, status, "Inner light no longer brighter")
+                self._move(Direction.OUTER, cur_region, lux, "Inner light no longer brighter")
             elif prev_level is LightLevel.DIM:
                 # When no longer dim (blinds are opened), move to outer edge for more sunlight.
-                self._move(Direction.OUTER, status, "Light rising to active threshold")
+                self._move(Direction.OUTER, cur_region, lux, "Light rising to active threshold")
         return True
 
 
