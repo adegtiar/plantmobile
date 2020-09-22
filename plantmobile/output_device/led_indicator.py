@@ -7,6 +7,7 @@ import RPi.GPIO as GPIO
 import tm1637   # type: ignore
 
 from plantmobile.common import Output, Pin, Status
+from plantmobile.input_device import ToggleButton
 
 
 class LED(gpiozero.LED):
@@ -28,6 +29,29 @@ class LedIndicator(Output):
             self.off()
         else:
             self._output_status(status)
+
+
+class ToggledLed(LedIndicator):
+
+    def __init__(self, led: LED, button: ToggleButton):
+        self._led = led
+        button.add_press_handler(self.update)
+        self._button = button
+
+    def _output_status(self, status: Status) -> None:
+        self.update()
+
+    def off(self) -> None:
+        self._led.off()
+
+    def setup(self) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._button.enabled():
+            self._led.on()
+        else:
+            self._led.off()
 
 
 class DirectionalLeds(LedIndicator):

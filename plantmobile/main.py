@@ -12,7 +12,7 @@ from plantmobile.controller import (
 )
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
-from plantmobile.input_device import Button, DistanceSensor, LightSensor, VoltageMeter
+from plantmobile.input_device import Button, DistanceSensor, LightSensor, ToggleButton, VoltageMeter
 from plantmobile.motor import StepperMotor
 from plantmobile.output_device import (
         DirectionalLeds,
@@ -20,6 +20,7 @@ from plantmobile.output_device import (
         LedBarGraphs,
         LuxDiffDisplay,
         PositionDisplay,
+        ToggledLed,
         TonalBuzzer,
 )
 from plantmobile.platform_driver import MobilePlatform
@@ -63,16 +64,6 @@ def cleanup(platforms: Iterable[MobilePlatform]) -> None:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    DEBUG_PANEL = DebugPanel(
-            DirectionalLeds(LED(board.D20), LED(board.D12), DIFF_PERCENT_CUTOFF),
-            LightCsvLogger("data/car_sensor_log.csv"),
-            LedBarGraphs(
-                data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
-                min_level=500, max_level=30000),
-            LuxDiffDisplay(clock_pin=board.D6, data_pin=board.D13),
-            PositionDisplay(clock_pin=board.D19, data_pin=board.D26),
-            buzzer=TonalBuzzer(board.D18),
-    )
     STATUS_PRINTER = StatusPrinter(print_interval=PRINT_INTERVAL_SECS)
 
     STEPPER_CAR = MobilePlatform(
@@ -84,16 +75,30 @@ if __name__ == '__main__':
             voltage_reader=VoltageMeter(analog_pin=0, r1=100, r2=100),
     )
 
+    ENABLE_AUTO_BUTTON = ToggleButton(board.CE1)
+    ENABLE_AUTO_LED = ToggledLed(LED(board.CE0), ENABLE_AUTO_BUTTON)
+    ENABLE_AUTO_BUTTON.toggle(enabled=True)
+
+    DEBUG_PANEL = DebugPanel(
+            DirectionalLeds(LED(board.D20), LED(board.D12), DIFF_PERCENT_CUTOFF),
+            LightCsvLogger("data/car_sensor_log.csv"),
+            LedBarGraphs(
+                data_pin=board.D23, latch_pin=board.D24, clock_pin=board.D25,
+                min_level=500, max_level=30000),
+            LuxDiffDisplay(clock_pin=board.D6, data_pin=board.D13),
+            PositionDisplay(clock_pin=board.D19, data_pin=board.D26),
+            ENABLE_AUTO_LED,
+            buzzer=TonalBuzzer(board.D18),
+    )
+
     button_handler = ButtonHandler(
         STEPPER_CAR, DEBUG_PANEL, STATUS_PRINTER,
         outer_button=Button(board.D21), inner_button=Button(board.D16))
-    light_follower = ShadowAvoider(
-        STEPPER_CAR, DEBUG_PANEL, STATUS_PRINTER,
-        Button(board.CE1), LED(board.CE0), DIFF_PERCENT_CUTOFF)
-    light_follower.toggle_enabled()
+    shadow_avoider = ShadowAvoider(
+        STEPPER_CAR, DEBUG_PANEL, STATUS_PRINTER, ENABLE_AUTO_BUTTON, DIFF_PERCENT_CUTOFF)
     keep_alive = BatteryKeepAlive(
-            STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, light_follower.enabled)
-    CONTROLLERS = [keep_alive, button_handler, light_follower]
+            STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, ENABLE_AUTO_BUTTON.enabled)
+    CONTROLLERS = [keep_alive, button_handler, shadow_avoider]
 
     # DC_CAR = MobilePlatform(
     #         name="DC",

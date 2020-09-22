@@ -8,9 +8,9 @@ from plantmobile.common import (
         Direction, get_diff_percent, LuxAggregator, LuxReading, Region, Status,
 )
 from plantmobile.debug_panel import DebugPanel
-from plantmobile.input_device import Button
+from plantmobile.input_device import Button, ToggleButton
 from plantmobile.logger import StatusPrinter
-from plantmobile.output_device import LED, Tune
+from plantmobile.output_device import Tune
 from plantmobile.platform_driver import BatteryError, MobilePlatform
 
 CONTROL_LOOP_SLEEP_SECS = 0.5
@@ -77,8 +77,7 @@ class ShadowAvoider(Controller):
             platform: MobilePlatform,
             debug_panel: DebugPanel,
             status_printer: StatusPrinter,
-            enable_button: Button,
-            enabled_led: LED,
+            enable_button: ToggleButton,
             diff_percent_cutoff: int,
             lux_threshold: int = 500,
             run_interval_secs: float = 10,
@@ -88,18 +87,14 @@ class ShadowAvoider(Controller):
         self.platform = platform
         self.debug_panel = debug_panel
         self.status_printer = status_printer
+        self._enable_button = enable_button
         self.diff_percent_cutoff = diff_percent_cutoff
-        self.enabled_led = enabled_led
         self.lux_threshold = lux_threshold
         self._prev_level: Optional[LightLevel] = None
         self._run_interval_secs = run_interval_secs
         self._last_run_time = float("-inf")
         self._lux_agg = LuxAggregator()
         self._i = 0
-
-        # Keep the button as a field so it won't be cleaned up.
-        self._enable_button = enable_button
-        enable_button.when_pressed = self.toggle_enabled
 
     def _lux_compare(self, lux: LuxReading) -> LightLevel:
         if max(lux.outer, lux.inner) < self.lux_threshold:
@@ -114,12 +109,8 @@ class ShadowAvoider(Controller):
         else:
             return LightLevel.BRIGHT
 
-    def toggle_enabled(self) -> None:
-        self.enabled_led.toggle()
-        # TODO: stop buzzer?
-
     def enabled(self) -> bool:
-        return self.enabled_led.is_active
+        return self._enable_button.enabled()
 
     def _notify(self) -> None:
         if self.debug_panel.buzzer:
