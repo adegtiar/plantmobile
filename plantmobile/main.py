@@ -33,6 +33,8 @@ PRINT_INTERVAL_SECS = 2.5
 PING_INTERVAL_SECS = 85
 # How long to trigger the battery with current during a keepalive ping.
 PING_DURATION_SECS = 0.5
+# Whether to ping the battery periodically to keep it active.
+ENABLE_BATTERY_KEEP_ALIVE = False
 
 
 def setup(debug_panel: DebugPanel, platforms: Iterable[MobilePlatform]) -> List[MobilePlatform]:
@@ -96,9 +98,11 @@ if __name__ == '__main__':
         outer_button=Button(board.D21), inner_button=Button(board.D16))
     shadow_avoider = ShadowAvoider(
         STEPPER_CAR, DEBUG_PANEL, STATUS_PRINTER, ENABLE_AUTO_BUTTON, DIFF_PERCENT_CUTOFF)
-    keep_alive = BatteryKeepAlive(
-            STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, ENABLE_AUTO_BUTTON.enabled)
-    CONTROLLERS = [keep_alive, button_handler, shadow_avoider]
+    CONTROLLERS = [button_handler, shadow_avoider]
+    if ENABLE_BATTERY_KEEP_ALIVE:
+        keep_alive = BatteryKeepAlive(
+                STEPPER_CAR, PING_INTERVAL_SECS, PING_DURATION_SECS, ENABLE_AUTO_BUTTON.enabled)
+        CONTROLLERS.insert(0, keep_alive)
 
     # DC_CAR = MobilePlatform(
     #         name="DC",
