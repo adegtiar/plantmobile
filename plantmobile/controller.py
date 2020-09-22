@@ -60,7 +60,7 @@ def control_loop(
 
 
 # Tune for "Here Comes the Sun" by The Beatles.
-AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5", "D5"], [1, 1, 1, 2, 2])
+AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5"], [1, 1, 1, 2])
 
 
 class LightLevel(Enum):
@@ -248,7 +248,7 @@ class ButtonHandler(Controller):
         self.outer_button = outer_button
         self.inner_button = inner_button
         # In hold mode, hold the button down for movement.
-        self._hold_mode = True
+        self._hold_mode = False
         self._direction_commanded: Optional[Direction] = None
         self._i = 0
 
