@@ -20,10 +20,11 @@ AUTO_MOVE_TUNE = Tune(["F#5", "D5", "E5", "F#5"], [1, 1, 1, 2])
 
 
 class LightLevel(Enum):
-    DIM = 0
-    BRIGHT = 1
-    OUTER_BRIGHTER = 2
-    INNER_BRIGHTER = 3
+    DARK = 0
+    DIM = 1
+    BRIGHT = 2
+    OUTER_BRIGHTER = 3
+    INNER_BRIGHTER = 4
 
 
 class ShadowAvoider(Controller):
@@ -35,7 +36,8 @@ class ShadowAvoider(Controller):
             status_printer: StatusPrinter,
             enable_button: ToggleButton,
             diff_percent_cutoff: int,
-            lux_threshold: int = 500,
+            dim_lux_threshold: int = 300,
+            bright_lux_threshold: int = 500,
             run_interval_secs: float = 10,
             ):
         assert platform.motor, "Must have motor configured"
@@ -45,7 +47,8 @@ class ShadowAvoider(Controller):
         self.status_printer = status_printer
         self._enable_button = enable_button
         self.diff_percent_cutoff = diff_percent_cutoff
-        self.lux_threshold = lux_threshold
+        self.dim_lux_threshold = dim_lux_threshold
+        self.bright_lux_threshold = bright_lux_threshold
         self._prev_level: Optional[LightLevel] = None
         self._run_interval_secs = run_interval_secs
         self._last_run_time = float("-inf")
@@ -53,8 +56,9 @@ class ShadowAvoider(Controller):
         self._i = 0
 
     def _lux_compare(self, lux: LuxReading) -> LightLevel:
-        if max(lux.outer, lux.inner) < self.lux_threshold:
-            return LightLevel.DIM
+        intensity = max(lux.outer, lux.inner)
+        if intensity < self.dim_lux_threshold:
+            return LightLevel.DARK
         elif abs(lux.diff_percent) >= self.diff_percent_cutoff:
             if lux.outer > lux.inner:
                 return LightLevel.OUTER_BRIGHTER
@@ -62,6 +66,8 @@ class ShadowAvoider(Controller):
                 return LightLevel.INNER_BRIGHTER
             else:
                 assert False, "Inconsistent lux reading"
+        elif intensity < self.bright_lux_threshold:
+            return LightLevel.DIM
         else:
             return LightLevel.BRIGHT
 
@@ -93,6 +99,7 @@ class ShadowAvoider(Controller):
         if ((direction is Direction.OUTER and region == Region.OUTER_EDGE)
                 or (direction is Direction.INNER and region == Region.INNER_EDGE)):
             # Don't try to move if we're already at the corresponding edge.
+            logging.info("Not moving to %s: already at edge", direction)
             return 0
 
         logging.info("Ran analysis on lux %s", lux)
@@ -149,9 +156,9 @@ class ShadowAvoider(Controller):
         logging.debug("Running light analysis with averaged lux: %s", lux)
         prev_level = self._prev_level
         light_level = self._prev_level = self._lux_compare(lux)
-        logging.debug("Prev light level: %s, New light level: %s", prev_level, light_level)
-        if light_level is LightLevel.DIM:
-            # When dim, keep at inner edge to avoid the blinds.
+        logging.info("Prev light level: %s, New light level: %s", prev_level, light_level)
+        if light_level is LightLevel.DARK:
+            # When dark, keep at inner edge to avoid the blinds.
             self._move(Direction.INNER, cur_region, lux, "Light dimming below active threshold")
         elif light_level is LightLevel.OUTER_BRIGHTER:
             # Move in the direction of the the brither light.
@@ -159,12 +166,14 @@ class ShadowAvoider(Controller):
         elif light_level is LightLevel.INNER_BRIGHTER:
             # Move in the direction of the the brighter light.
             self._move(Direction.INNER, cur_region, lux, "Light difference found")
-        else:
-            assert light_level is LightLevel.BRIGHT
+        elif light_level is LightLevel.BRIGHT:
             if prev_level is LightLevel.INNER_BRIGHTER:
                 # When inner is no longer brighter, the shadow is likely passing the outer edge.
                 self._move(Direction.OUTER, cur_region, lux, "Inner light no longer brighter")
-            elif prev_level is LightLevel.DIM:
+            elif prev_level in (LightLevel.DARK, LightLevel.DIM):
                 # When no longer dim (blinds are opened), move to outer edge for more sunlight.
                 self._move(Direction.OUTER, cur_region, lux, "Light rising to active threshold")
+        else:
+            assert light_level is LightLevel.DIM
+            # Do nothing, to allow a buffer for light fluctuating back down without thrashing.
         return True
