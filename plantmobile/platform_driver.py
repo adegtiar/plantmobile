@@ -7,7 +7,7 @@ from plantmobile.input_device import DistanceSensor, LightSensor, VoltageMeter
 from plantmobile.motor import StepperMotor
 
 # Number of steps in a single movement unit between sensor checks.
-STEPS_PER_MOVE = 7
+STEPS_PER_MOVE = 13
 # A voltage reading below this will abort motor movement and display an error.
 MOTOR_VOLTAGE_CUTOFF = 4.0
 # The max distance to travel, with a buffer to account for imprecision.

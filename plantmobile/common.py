@@ -59,8 +59,8 @@ class Region(Enum):
     """Indicates the region of the table corresponding to the position."""
     UNKNOWN = None
     OUTER_EDGE = 0
-    MID = 50
-    INNER_EDGE = 100
+    MID = 25
+    INNER_EDGE = 50
 
     @classmethod
     def size(cls) -> int:

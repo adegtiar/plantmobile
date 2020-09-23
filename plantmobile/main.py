@@ -74,7 +74,6 @@ if __name__ == '__main__':
             motor=StepperMotor(board.D27, board.D22, board.MOSI, board.MISO),
             distance_sensor=DistanceSensor(
                 trig_pin=board.D4, echo_pin=board.D17, threshold_cm=10, timeout=0.05),
-            voltage_reader=VoltageMeter(analog_pin=0, r1=100, r2=100),
     )
 
     ENABLE_AUTO_BUTTON = ToggleButton(board.CE1)
