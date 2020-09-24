@@ -12,7 +12,7 @@ from plantmobile.controller import (
 )
 from plantmobile.debug_panel import DebugPanel
 from plantmobile.logger import LightCsvLogger, StatusPrinter
-from plantmobile.input_device import Button, DistanceSensor, LightSensor, ToggleButton, VoltageMeter
+from plantmobile.input_device import Button, DistanceSensor, LightSensor, ToggleButton
 from plantmobile.motor import StepperMotor
 from plantmobile.output_device import (
         DirectionalLeds,

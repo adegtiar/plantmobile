@@ -156,12 +156,16 @@ class ShadowAvoider(Controller):
         logging.debug("Running light analysis with averaged lux: %s", lux)
         prev_level = self._prev_level
         light_level = self._prev_level = self._lux_compare(lux)
+        if prev_level == light_level:
+            # Light level is effectively unchanged.
+            return False
+
         logging.info("Prev light level: %s, New light level: %s", prev_level, light_level)
         if light_level is LightLevel.DARK:
             # When dark, keep at inner edge to avoid the blinds.
             self._move(Direction.INNER, cur_region, lux, "Light dimming below active threshold")
         elif light_level is LightLevel.OUTER_BRIGHTER:
-            # Move in the direction of the the brither light.
+            # Move in the direction of the the brighter light.
             self._move(Direction.OUTER, cur_region, lux, "Light difference found")
         elif light_level is LightLevel.INNER_BRIGHTER:
             # Move in the direction of the the brighter light.
